@@ -1,0 +1,14 @@
+{
+  "livro": "Enchei-vos",
+  "aviso": "Conteúdo do livro ainda não carregado. Envie as fotos das páginas para eu transcrever aqui, ou adicione manualmente pelo botão '+ Passagem'.",
+  "semanas": [
+    {
+      "id": "s1",
+      "titulo": "Semana 1",
+      "tema": "(preencher com o tema do Enchei-vos)",
+      "dias": [
+        { "id": "s1d1", "titulo": "Dia 1", "ref": "", "texto": "" }
+      ]
+    }
+  ]
+}
