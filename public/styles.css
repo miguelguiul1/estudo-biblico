@@ -7,11 +7,16 @@
   --display:"Kaushan Script","Segoe Script","Brush Script MT",cursive;
   --body:"Lora",Georgia,serif; --label:"Montserrat","Helvetica Neue",Arial,sans-serif;
   --w1:#b3264a; --w2:#f0803a;
+  --hero:linear-gradient(160deg,#ff9a62 0%,#f0587b 48%,#8b4fc8 100%); --hero-glow:#f0587b44; --on-hero:#fff;
 }
+:root[data-hora="vesperas"]{
+  --paper:#fff3e2; --soft:#ffe6c7; --line:#f0d6b4; --ink:#3a2418; --mute:#8a6e58; --accent:#a8431f;
+  --hero:linear-gradient(160deg,#ffc15e 0%,#f08a4b 45%,#b4463d 100%); --hero-glow:#f08a4b55; --dots:#e4c39b}
 :root[data-theme="dark"]{
-  --paper:#1c1016; --card:#2a1820; --soft:#341d27; --line:#47303a;
-  --ink:#fbeff3; --mute:#c4a7b2; --accent:#ff8fa8; --ember:#ffa05c; --gold:#ffc65a;
-  --shadow:0 12px 32px #00000066; --shadow-sm:0 4px 14px #00000044; --dots:#6e4b5a; color-scheme:dark}
+  --paper:#0e1324; --card:#192038; --soft:#222b4a; --line:#2f3a5e;
+  --ink:#f5ecdc; --mute:#aab3cf; --accent:#ffbf6b; --ember:#ffb347; --gold:#ffd27a;
+  --hero:linear-gradient(165deg,#1b2550 0%,#2b2f6b 55%,#4a2f63 100%); --hero-glow:#00000066;
+  --shadow:0 12px 32px #00000066; --shadow-sm:0 4px 14px #00000044; --dots:#46527d; color-scheme:dark}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{scroll-behavior:smooth}
 body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.6 var(--body);min-height:100vh;padding-bottom:env(safe-area-inset-bottom)}
@@ -29,7 +34,7 @@ main{max-width:640px;margin:0 auto;padding:6px 16px 96px;animation:in .5s cubic-
 
 /* aurora */
 .hero{position:relative;overflow:hidden;border-radius:28px;padding:26px 22px 22px;color:#fff;text-align:center;
-  background:linear-gradient(160deg,#ff9a62 0%,#f0587b 48%,#8b4fc8 100%);box-shadow:0 18px 40px #f0587b44}
+  background:var(--hero);box-shadow:0 18px 40px var(--hero-glow)}
 .rays{position:absolute;left:50%;top:-40px;width:520px;height:520px;margin-left:-260px;opacity:.35;animation:spin 90s linear infinite;
   background:repeating-conic-gradient(from 0deg,#ffffff55 0 6deg,transparent 6deg 18deg);
   -webkit-mask:radial-gradient(circle,#000 0,transparent 68%);mask:radial-gradient(circle,#000 0,transparent 68%)}
@@ -136,3 +141,14 @@ label{display:block;margin:14px 0 4px;font:700 11px/1 var(--label);letter-spacin
 #toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translate(-50%,40px);background:var(--accent);color:#fff;padding:12px 20px;border-radius:999px;opacity:0;transition:.3s;font:700 13px/1.2 var(--label);pointer-events:none;max-width:90vw}
 #toast.show{opacity:1;transform:translate(-50%,0)}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+
+/* Horas do dia: vela acesa na Completas */
+:root[data-hora="completas"] .flame{fill:#ffcf7a;filter:drop-shadow(0 0 14px #ffb347aa)}
+:root[data-hora="completas"] .rays{opacity:.18}
+:root[data-hora="completas"] .today small{color:#6c5a3a}
+.hora{display:inline-flex;align-items:center;gap:8px;font:700 11px/1 var(--label);letter-spacing:.16em;text-transform:uppercase;opacity:.95}
+.bible{color:inherit;text-decoration:underline;text-underline-offset:3px;font:600 12px/1.2 var(--label);display:inline-block;margin:2px 0 6px;position:relative}
+.today{color:#33202a}
+.today strong{color:#33202a}
+:root[data-theme="dark"] .stage h2,:root[data-theme="dark"] .sum h3,:root[data-theme="dark"] .step.done{color:var(--accent)}
+:root[data-theme="dark"] .num{background:color-mix(in srgb,var(--w2) 22%,var(--card));color:var(--w2)}

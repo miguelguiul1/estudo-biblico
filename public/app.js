@@ -10,9 +10,14 @@ const STEPS = [
   { id: "actio", ic: "i-go", nome: "Actio", sub: "Compromisso", guia: "Que gesto concreto vou viver por causa desta Palavra?" }
 ];
 const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } };
-let db = Object.assign({ config: { geminiKey: "", model: "gemini-2.5-flash", theme: "light" }, custom: [], estudos: {} }, load());
+let db = Object.assign({ config: { geminiKey: "", model: "gemini-2.5-flash", theme: "auto" }, custom: [], estudos: {} }, load());
 const save = () => localStorage.setItem(KEY, JSON.stringify(db));
-const aplicaTema = () => document.documentElement.setAttribute("data-theme", db.config.theme === "dark" ? "dark" : "light");
+// Horas do dia: Laudes (manhã), Vésperas (tarde), Completas (noite)
+const periodo = () => { const t = db.config.theme; if (t === "light") return "laudes"; if (t === "dark") return "completas"; const h = new Date().getHours(); return h >= 5 && h < 12 ? "laudes" : h >= 12 && h < 18 ? "vesperas" : "completas"; };
+const HORA = { laudes: "Laudes · manhã", vesperas: "Vésperas · tarde", completas: "Completas · noite" };
+const aplicaTema = () => { const p = periodo(), r = document.documentElement; r.setAttribute("data-hora", p); r.setAttribute("data-theme", p === "completas" ? "dark" : "light"); document.querySelector('meta[name="theme-color"]')?.setAttribute("content", p === "completas" ? "#0e1324" : p === "vesperas" ? "#f08a4b" : "#f0587b"); };
+// Referência com link para a Bíblia do leitor (o app não copia o texto das traduções)
+const linkBiblia = ref => ref ? `<a class="bible" target="_blank" rel="noopener" href="https://www.biblegateway.com/passage/?search=${encodeURIComponent(ref.replace(/(\d),(\d)/g, "$1:$2").replace(/\s*\(.*?\)/g, ""))}">Abrir na Bíblia ↗</a>` : "";
 aplicaTema();
 // cada semana tem sua cor e ícone (ciclo de 7)
 const WK = [["#b3264a","#f0803a","i-book"],["#e8702a","#f5b942","i-heart"],["#1f9d8b","#7ed6a8","i-leaf"],["#d6457a","#ff9bb5","i-heart"],["#6c4bc1","#ae92ec","i-scroll"],["#b01f3e","#e0604a","i-cross"],["#2f6fd1","#7fb8f5","i-dove"]];
@@ -49,7 +54,7 @@ function telaInicio() {
   const feitos = dias.filter(d => db.estudos[d.id]?.resumo).length;
   const prox = dias.find(d => !db.estudos[d.id]?.resumo) || dias[0];
   let h = `<section class="hero" style="${prox ? wkStyle(prox.semana.id) : ""}"><div class="rays"></div>
-    <p class="greet">${saudacao()}</p><svg class="flame" aria-hidden="true"><use href="#flame"/></svg>
+    <p class="greet">${saudacao()} · ${HORA[periodo()]}</p><svg class="flame" aria-hidden="true"><use href="#flame"/></svg>
     <h2>Enchei-vos</h2><p class="sub">Que a Palavra de hoje te encontre.</p>`;
   if (prox) h += `<button class="today" data-d="${esc(prox.id)}"><span class="play">${ICO("i-play")}</span><span><small>${feitos ? "Continuar de onde parou" : "Começar agora"}</small><strong>${esc(prox.titulo)}</strong></span></button>`;
   h += `</section><div class="stats"><div class="stat"><b>${feitos}</b><span>dias rezados</span></div><div class="stat"><b>${dias.length - feitos}</b><span>para rezar</span></div></div>`;
@@ -97,7 +102,7 @@ function telaSessao(diaId, passo = 0) {
   setTop(d.titulo.split(" · ")[0], () => telaSemana(d.semana.id));
   const p = STEPS[passo];
   let h = `<div style="${wkStyle(d.semana.id)}"><div class="passage"><small>${esc(d.semana.titulo)} · ${esc(d.semana.tema)}</small><h3>${esc(d.titulo.split(" · ").slice(1).join(" · "))}</h3>
-    <p class="ref">${esc(d.ref) || "Sem referência"}</p>` +
+    <p class="ref">${esc(d.ref) || "Sem referência"}</p><br>${linkBiblia(d.ref)}` +
     (d.texto ? `<p style="font-style:italic;white-space:pre-wrap">${esc(d.texto)}</p>` : `<p>Leia na sua Bíblia / Enchei-vos${d.pagina ? " (pág. " + esc(d.pagina) + ")" : ""}.</p>`) +
     (d.foco ? `<p>${esc(d.foco)}</p>` : "") + `</div>`;
   h += `<div class="stepper">` + STEPS.map((s, i) => `<button class="step ${i === passo ? "on" : ""} ${e.passos[s.id] ? "done" : ""}" data-i="${i}">${ICO(s.ic)}${s.nome.slice(0,6)}${s.nome.length>6?".":""}</button>`).join("") + `</div>`;
@@ -195,7 +200,7 @@ function exportar() {
 }
 function telaAjustes() {
   setTop("Ajustes", telaInicio);
-  $("#view").innerHTML = `<div class="card"><b>Aparência</b><div class="seg" id="tema"><button data-t="light" class="${db.config.theme !== "dark" ? "on" : ""}">Claro</button><button data-t="dark" class="${db.config.theme === "dark" ? "on" : ""}">Escuro</button></div></div>
+  $("#view").innerHTML = `<div class="card"><b>Aparência</b><p class="muted">Automático muda com a hora: manhã clara, tarde dourada, noite à luz de vela.</p><div class="seg" id="tema"><button data-t="auto" class="${(db.config.theme || "auto") === "auto" ? "on" : ""}">Auto</button><button data-t="light" class="${db.config.theme === "light" ? "on" : ""}">Claro</button><button data-t="dark" class="${db.config.theme === "dark" ? "on" : ""}">Noite</button></div></div>
   <div class="card"><b>IA gratuita (opcional)</b><p class="muted">Crie uma chave grátis em aistudio.google.com/apikey e cole aqui. Fica só neste aparelho. Sem chave, o app usa a organização local.</p>
   <label for="k">Chave Gemini</label><input id="k" type="password" value="${esc(db.config.geminiKey)}"><label for="m">Modelo</label><input id="m" value="${esc(db.config.model)}">
   <p><button class="btn" id="ok">Salvar</button></p></div>`;
