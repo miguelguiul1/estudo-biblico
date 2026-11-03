@@ -52,6 +52,7 @@ function todasSemanas() {
 const acharDia = id => todasSemanas().flatMap(s => s.dias.map(d => ({ ...d, semana: s }))).find(d => d.id === id);
 
 // ---------- Telas ----------
+const fmtData = iso => iso ? iso.split('-').reverse().join('/') : '';
 function ordinal(t){return (t.split(" · ")[0]||"").replace(/\s+/g," ")}
 function saudacao(){const h=new Date().getHours();return h<12?"Bom dia":h<18?"Boa tarde":"Boa noite"}
 function telaInicio() {
@@ -83,7 +84,7 @@ function telaSemana(id) {
   const ok = sm.dias.filter(d => db.estudos[d.id]?.resumo).length;
   let h = `<section class="whead" style="${wkStyle(sm.id)}"><h2>${esc(sm.tema)}</h2><p>${esc(sm.titulo)} · ${ok} de ${sm.dias.length} ${sm.dias.length === 1 ? "dia" : "dias"}</p><div class="bar"><i style="width:${sm.dias.length ? 100 * ok / sm.dias.length : 0}%"></i></div></section><div class="daylist" style="${wkStyle(sm.id)}">`;
   sm.dias.forEach((d, i) => { const [n, ...r] = d.titulo.split(" · "); const f = !!db.estudos[d.id]?.resumo;
-    h += `<button class="day ${f ? "done" : ""}" style="--i:${i}" data-d="${esc(d.id)}"><span class="num">${f ? ICO("i-check") : esc(n.replace(/\D+/g, "") || "•")}</span><span class="nm"><b>${esc(r.join(" · ") || n)}</b><span>${esc(d.ref)}</span></span><span class="go">${ICO("i-chev")}</span></button>`; });
+    h += `<button class="day ${f ? "done" : ""}" style="--i:${i}" data-d="${esc(d.id)}"><span class="num">${f ? ICO("i-check") : esc(n.replace(/\D+/g, "") || "•")}</span><span class="nm"><b>${esc(r.join(" · ") || n)}</b><span>${esc(d.ref)}${db.estudos[d.id]?.data ? " · " + fmtData(db.estudos[d.id].data) : ""}</span></span><span class="go">${ICO("i-chev")}</span></button>`; });
   h += `</div>`;
   $("#view").innerHTML = h;
   document.querySelectorAll("[data-d]").forEach(el => el.onclick = () => telaSessao(el.dataset.d));
@@ -110,6 +111,7 @@ function telaSessao(diaId, passo = 0) {
   let h = `<div style="${wkStyle(d.semana.id)}"><div class="passage"><h2>${esc(titulo)}</h2><p class="meta">${esc(d.semana.titulo)} · ${esc(d.semana.tema)}</p>
     <p class="ref">${esc(d.ref) || "Sem referência"}</p>${linkBiblia(d.ref)}` +
     (d.texto || d.foco ? `<details><summary>Sobre este dia</summary>${d.texto ? `<p style="font-style:italic;white-space:pre-wrap">${esc(d.texto)}</p>` : ""}${d.foco ? `<p>${esc(d.foco)}</p>` : ""}<p class="muted">Leia no seu Enchei-vos${d.pagina ? ", pág. " + esc(d.pagina) : ""}.</p></details>` : "") + `</div>`;
+  h += `<div class="datebox"><label for="dt">Data (opcional)</label><div class="daterow"><input id="dt" type="date" value="${esc(e.data || "")}"><button class="btn ghost" id="hoje" type="button">Hoje</button></div></div>`;
   h += `<div class="stepper" role="group" aria-label="Etapas da Lectio Divina">` + STEPS.map((s, i) => `<button class="step ${i === passo ? "on" : ""} ${e.passos[s.id] ? "done" : ""}" data-i="${i}" aria-label="${s.nome}, ${s.sub}${e.passos[s.id] ? ", preenchida" : ""}" ${i === passo ? 'aria-current="step"' : ""}>${ICO(s.ic)}</button>`).join("") + `</div>`;
   h += `<section class="stage"><h2>${p.nome}<span>${p.sub}</span></h2><p class="guide">${p.guia}</p>
   <div class="micwrap"><button class="mic" id="mic" aria-label="Gravar" aria-pressed="false">${ICO("i-mic")}</button>
@@ -123,6 +125,8 @@ function telaSessao(diaId, passo = 0) {
   const tx = $("#tx");
   const guardar = () => { e.passos[p.id] = tx.value.trim(); e.atualizado = Date.now(); save(); };
   tx.oninput = guardar;
+  const dt = $("#dt"); dt.onchange = () => { e.data = dt.value || ""; e.atualizado = Date.now(); save(); };
+  $("#hoje").onclick = () => { const n = new Date(); dt.value = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`; dt.onchange(); toast("Data marcada"); };
   document.querySelectorAll(".step").forEach(b => b.onclick = () => { guardar(); telaSessao(diaId, +b.dataset.i); });
   $("#prev").onclick = () => { guardar(); telaSessao(diaId, passo - 1); };
   $("#next").onclick = () => { guardar(); passo === STEPS.length - 1 ? organizar(diaId) : telaSessao(diaId, passo + 1); };
@@ -193,7 +197,7 @@ function resumoHTML(r) {
 // ---------- Exportar / ajustes ----------
 function textoExport(id) {
   const e = db.estudos[id], d = acharDia(id), r = e.resumo;
-  let t = `${d.semana.titulo} · ${d.titulo} — ${d.ref}\n\n`;
+  let t = `${d.semana.titulo} · ${d.titulo} — ${d.ref}${e.data ? "\nData: " + fmtData(e.data) : ""}\n\n`;
   if (r) { t += `${r.titulo || ""}\nIdeia central: ${r.ideia_central}\n`; for (const s of STEPS) if (r.por_etapa?.[s.id]?.length) t += `\n${s.nome}\n- ${r.por_etapa[s.id].join("\n- ")}\n`; t += `\nCompromisso: ${r.compromisso}\n`; }
   else for (const s of STEPS) t += `\n${s.nome}\n${e.passos[s.id] || ""}\n`;
   return t;

@@ -145,3 +145,8 @@ label{display:block;margin:16px 0 6px;font:700 13px/1.2 var(--label);letter-spac
 #toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translate(-50%,40px);background:var(--ink);color:var(--paper);padding:13px 22px;border-radius:999px;opacity:0;transition:.3s;font:700 14px/1.2 var(--label);pointer-events:none;max-width:90vw}
 #toast.show{opacity:1;transform:translate(-50%,0)}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+.datebox{margin-top:14px}
+.datebox label{margin:0 0 6px}
+.daterow{display:flex;gap:10px;align-items:center}
+.daterow input{flex:1;min-width:0}
+.daterow .btn{padding:0 20px}
