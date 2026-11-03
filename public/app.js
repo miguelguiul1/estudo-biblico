@@ -128,7 +128,7 @@ function telaSessao(diaId, passo = 0, origem) {
   <textarea id="tx" aria-label="O que você falou em ${p.nome}" placeholder="O que você falar aparece aqui. Pode editar.">${esc(e.passos[p.id] || "")}</textarea>
   <div class="row"><button class="btn ghost grow" id="prev" ${passo === 0 ? "disabled" : ""}>Anterior</button>
   <button class="btn grow" id="next">${passo === STEPS.length - 1 ? "Concluir" : "Próxima"}</button></div></section>`;
-  h += `<h2 class="sec">Fotos do caderno</h2><p class="muted">Tire uma foto ou escolha da galeria. As fotos ficam só neste aparelho.</p><div id="fotos" class="fotos" aria-live="polite"></div><div class="row"><button class="btn ghost" id="addfoto" type="button">Adicionar foto</button><input id="ff" type="file" accept="image/*" multiple hidden></div>`;
+  h += `<h2 class="sec">Fotos do caderno</h2><p class="muted">Tire uma foto ou escolha da galeria. ${typeof podeSync === "function" && podeSync() ? "As fotos ficam neste aparelho e na sua conta." : "As fotos ficam só neste aparelho."}</p><div id="fotos" class="fotos" aria-live="polite"></div><div class="row"><button class="btn ghost" id="addfoto" type="button">Adicionar foto</button><input id="ff" type="file" accept="image/*" multiple hidden></div>`;
   h += `<h2 class="sec">Resumo</h2>` + (e.resumo ? resumoHTML(e.resumo) : `<p class="muted">Ao terminar, organize suas ideias.</p>`) +
     `<div class="row"><button class="btn" id="org">Organizar minhas ideias</button><button class="btn ghost" id="copy">Copiar</button></div></div>`;
   $("#view").innerHTML = h;
@@ -228,12 +228,12 @@ function telaAjustes() {
   <div class="row"><button class="btn ghost" id="bk">Fazer backup</button><button class="btn ghost" id="rs">Restaurar</button><input id="rsf" type="file" accept="application/json,.json" hidden></div>
   ${sessao ? "" : `<div class="row" id="apg"><button class="btn ghost" id="ap">Apagar tudo</button></div>`}</div>`;
   ligaConta();
-  document.querySelectorAll("#tema button").forEach(b => b.onclick = () => { db.config.theme = b.dataset.t; save(); aplicaTema(); telaAjustes(); });
+  document.querySelectorAll("#tema button").forEach(b => b.onclick = () => { db.config.theme = b.dataset.t; db.config.cfgAt = Date.now(); save(); aplicaTema(); telaAjustes(); });
   $("#bk").onclick = () => { const { config, sync, ...resto } = db; resto.estudos = Object.fromEntries(Object.entries(resto.estudos).map(([k, v]) => { const { fotos, ...r } = v; return [k, r]; })); const url = URL.createObjectURL(new Blob([JSON.stringify({ lectio: 1, ...resto }, null, 1)], { type: "application/json" })); Object.assign(document.createElement("a"), { href: url, download: "lectio-backup-" + hojeISO() + ".json" }).click(); setTimeout(() => URL.revokeObjectURL(url), 2000); toast("Backup gerado"); };
   $("#rs").onclick = () => $("#rsf").click();
   $("#rsf").onchange = async ev => { try { const j = JSON.parse(await ev.target.files[0].text()); if (!j.lectio || typeof j.estudos !== "object") throw 0; const { lectio, sync, config, ...resto } = j; db = Object.assign(db, resto); save(); toast("Backup restaurado"); telaInicio(); } catch { toast("Esse arquivo não parece um backup do Lectio."); } };
   const ap0 = $("#ap"); if (ap0) ap0.onclick = () => { $("#apg").innerHTML = `<p class="muted grow">Isso apaga todos os seus estudos, fotos, medalhas e XP deste aparelho. Não dá para desfazer.</p><button class="btn" id="ap2">Sim, apagar tudo</button><button class="btn ghost" id="ap3">Cancelar</button>`; $("#ap3").onclick = telaAjustes; $("#ap2").onclick = () => { const cfg = db.config; db = { config: cfg, custom: [], estudos: {}, stats: { voz: 0, quizzes: 0, perfect: 0 }, medalhas: {}, atividade: {}, horas: {}, diario: {}, bonus: 0, nivelVisto: 1 }; apagaTodasFotos(); save(); toast("Tudo apagado."); telaInicio(); }; };
-  $("#ok").onclick = () => { db.config.geminiKey = $("#k").value.trim(); db.config.model = $("#m").value.trim() || "gemini-2.5-flash"; save(); toast("Salvo"); telaInicio(); };
+  $("#ok").onclick = () => { db.config.geminiKey = $("#k").value.trim(); const mNovo = $("#m").value.trim() || "gemini-2.5-flash"; if (mNovo !== db.config.model) db.config.cfgAt = Date.now(); db.config.model = mNovo; save(); toast("Salvo"); telaInicio(); };
 }
 
 // ---------- Medalhas e quiz ----------

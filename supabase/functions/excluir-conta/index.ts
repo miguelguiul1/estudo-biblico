@@ -47,6 +47,14 @@ Deno.serve(async (req: Request) => {
   const { data, error } = await admin.auth.getUser(token);
   if (error || !data.user) return resposta(req, { erro: "token_invalido" }, 401);
 
+  // Os arquivos das fotos ficam no Storage e não somem em cascata: removemos a pasta do dono antes.
+  const pasta = data.user.id;
+  for (let i = 0; i < 20; i++) {
+    const { data: arquivos } = await admin.storage.from("fotos").list(pasta, { limit: 100 });
+    if (!arquivos?.length) break;
+    await admin.storage.from("fotos").remove(arquivos.map((f) => `${pasta}/${f.name}`));
+  }
+
   const { error: erroApagar } = await admin.auth.admin.deleteUser(data.user.id);
   if (erroApagar) return resposta(req, { erro: "falha_ao_excluir" }, 500); // nunca devolvemos detalhes
 

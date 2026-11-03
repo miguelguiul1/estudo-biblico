@@ -52,7 +52,7 @@ function ligaFotos(diaId, e) {
       lb.querySelector(".lbrow").innerHTML = `<button class="btn" id="lb-s" type="button">Sim, remover</button><button class="btn ghost" id="lb-n" type="button">Cancelar</button>`;
       lb.querySelector("#lb-m").textContent = "Esta foto será apagada deste aparelho.";
       lb.querySelector("#lb-n").onclick = () => { fecha(); abreFoto(u, id, n); };
-      lb.querySelector("#lb-s").onclick = async () => { try { await apagaFotoBlob(id); } catch {} e.fotos = (e.fotos || []).filter(x => x !== id); save(); fecha(); desenha(); toast("Foto removida."); };
+      lb.querySelector("#lb-s").onclick = async () => { try { await apagaFotoBlob(id); } catch {} e.fotos = (e.fotos || []).filter(x => x !== id); marcaFotoApagada(id); save(); fecha(); desenha(); toast("Foto removida."); };
     };
   };
   btn.onclick = () => inp.click();
@@ -67,4 +67,67 @@ function ligaFotos(diaId, e) {
     desenha();
   };
   desenha();
+}
+
+// ---------- Fotos na conta (espaço privado do Supabase) ----------
+// Se a foto já tinha subido, guardamos o id para apagá-la também no servidor (mesmo que a pessoa esteja offline agora).
+function marcaFotoApagada(id) {
+  const s = db.sync; if (!s || !s.uid) return;
+  const sinc = s.fotosSinc || [];
+  if (sinc.includes(id)) { s.fotosApagar = [...new Set([...(s.fotosApagar || []), id])]; s.fotosSinc = sinc.filter(x => x !== id); }
+}
+
+async function sincronizaFotos(uid, linhas) {
+  const sync = db.sync, sinc = new Set(sync.fotosSinc || []), apagar = new Set(sync.fotosApagar || []);
+  const srv = new Map(linhas.map(r => [r.id, r])), bucket = sb.storage.from("fotos");
+  let falhou = false;
+  // 1) remoções feitas neste aparelho
+  for (const id of [...apagar]) {
+    const r = srv.get(id);
+    if (!r) { apagar.delete(id); continue; }
+    const a = await bucket.remove([r.caminho]);
+    const b = a.error ? a : await sb.from("fotos").delete().eq("id", id);
+    if (b.error) { falhou = true; continue; }
+    apagar.delete(id); srv.delete(id);
+  }
+  const locais = new Map();
+  for (const [dia, e] of Object.entries(db.estudos)) for (const id of e.fotos || []) locais.set(id, dia);
+  // 2) servidor -> este aparelho
+  for (const [id, r] of srv) {
+    if (locais.has(id) || apagar.has(id)) continue;
+    const { data, error } = await bucket.download(r.caminho);
+    if (error || !data) { falhou = true; continue; }
+    try { await gravaFoto(id, data); } catch { falhou = true; continue; }
+    const e = (db.estudos[r.dia_id] ||= { diaId: r.dia_id, passos: {}, atualizado: 0 });
+    (e.fotos ||= []).push(id); locais.set(id, r.dia_id); sinc.add(id);
+  }
+  // 3) este aparelho -> servidor (ou remover aqui o que foi apagado em outro aparelho)
+  for (const [id, dia] of locais) {
+    if (srv.has(id)) { sinc.add(id); continue; }
+    if (sinc.has(id)) {
+      try { await apagaFotoBlob(id); } catch {}
+      const e = db.estudos[dia]; if (e) e.fotos = (e.fotos || []).filter(x => x !== id);
+      sinc.delete(id); continue;
+    }
+    let blob = null; try { blob = await lerFoto(id); } catch {}
+    if (!blob) continue;
+    const caminho = `${uid}/${id}.jpg`;
+    const up = await bucket.upload(caminho, blob, { contentType: "image/jpeg", upsert: false });
+    if (up.error && String(up.error.statusCode || up.error.status) !== "409") { falhou = true; continue; }
+    const ins = await sb.from("fotos").upsert({ id, user_id: uid, dia_id: dia, caminho }, { onConflict: "id", ignoreDuplicates: true });
+    if (ins.error) { falhou = true; continue; }
+    sinc.add(id);
+  }
+  sync.fotosSinc = [...sinc]; sync.fotosApagar = [...apagar];
+  return !falhou;
+}
+
+// Usado por "Apagar meus dados": remove os arquivos das fotos na conta (a função do banco apaga as linhas).
+async function apagaFotosDaConta() {
+  const { data, error } = await sb.from("fotos").select("caminho");
+  if (error) return error.code === "PGRST205" || error.code === "42P01"; // tabela ainda não existe: não há fotos na conta
+  const caminhos = (data || []).map(r => r.caminho);
+  for (let i = 0; i < caminhos.length; i += 100) { const r = await sb.storage.from("fotos").remove(caminhos.slice(i, i + 100)); if (r.error) return false; }
+  if (db.sync) { db.sync.fotosSinc = []; db.sync.fotosApagar = []; }
+  return true;
 }

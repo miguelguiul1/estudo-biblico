@@ -17,12 +17,13 @@ if (_linkRuim) history.replaceState(null, "", location.pathname); // o endereço
 const MSG_ESQUECI = "Se esse e-mail tiver conta, enviamos um link."; // sempre a mesma, exista o e-mail ou não
 
 let sb = null, sessao = null, _perfilPronto = null, _perfilApelido = "";
+let _chaveNuvem; // undefined = ainda não sabemos; null = não há cópia; objeto = cópia criptografada
 let _syncTimer = null, _syncando = false, _syncDeNovo = false, _syncOk = false, _syncMsg = "";
 
 const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : "10000000-1000-4000-8000-100000000000".replace(/[018]/g, c => (c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))).toString(16)));
 const dbVazio = cfg => ({ config: cfg, custom: [], estudos: {}, stats: { voz: 0, quizzes: 0, perfect: 0 }, medalhas: {}, atividade: {}, horas: {}, diario: {}, bonus: 0, nivelVisto: 1 });
 const temConteudo = e => !!e && (Object.values(e.passos || {}).some(Boolean) || !!e.resumo || !!e.data);
-const localTemDados = () => Object.values(db.estudos).some(temConteudo) || Object.keys(db.medalhas).length > 0 || Object.keys(db.atividade).length > 0 || db.custom.length > 0 || db.stats.voz > 0 || db.stats.quizzes > 0 || (db.bonus || 0) > 0;
+const localTemDados = () => Object.values(db.estudos).some(e => temConteudo(e) || (e.fotos || []).length > 0) || Object.keys(db.medalhas).length > 0 || Object.keys(db.atividade).length > 0 || db.custom.length > 0 || db.stats.voz > 0 || db.stats.quizzes > 0 || (db.bonus || 0) > 0;
 const hhmm = d => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 
 function setSyncMsg(t) { _syncMsg = t; const el = document.getElementById("syncmsg"); if (el) el.textContent = t; }
@@ -78,10 +79,10 @@ function telaPerfil() {
     <div class="legal" tabindex="0" role="region" aria-label="Aviso de privacidade, texto provisório">
       <p><b>Aviso de privacidade (texto provisório)</b></p>
       <p><b>Quem cuida dos dados:</b> [nome do responsável pelo aplicativo], contato: [e-mail de contato].</p>
-      <p><b>O que guardamos:</b> seu e-mail, seu apelido, o que você escreveu ou falou em cada dia de oração, os resumos, datas, medalhas e pontos. [conferir lista final].</p>
+      <p><b>O que guardamos:</b> seu e-mail, seu apelido, o que você escreveu ou falou em cada dia de oração, os resumos, datas, medalhas, pontos, as fotos do caderno e suas configurações. [conferir lista final].</p>
       <p><b>Quem vê:</b> somente você. [definir o que será compartilhado se houver grupos no futuro].</p>
       <p><b>Para que usamos:</b> guardar o seu histórico e levá-lo para os seus outros aparelhos. [..].</p>
-      <p><b>Chave da IA:</b> fica só no seu aparelho e nunca é enviada.</p>
+      <p><b>Chave da IA:</b> se você quiser guardá-la na conta, ela é criptografada no seu aparelho com uma senha de proteção que só você conhece. Nós não conseguimos ler a chave nem recuperar essa senha.</p>
       <p><b>Seus direitos:</b> você pode apagar seus dados ou excluir a conta em Ajustes. [..base legal e prazos da LGPD..].</p>
       <p><b>Menores de 18 anos:</b> [..regra a definir..].</p>
     </div>
@@ -123,7 +124,7 @@ async function decideSync() {
 function telaPrimeiraSync() {
   setTop("Dados deste aparelho", null);
   $("#view").innerHTML = `<div class="card"><h2 class="titulo-tela">Enviar para a sua conta?</h2>
-    <p>Este aparelho já tem orações, medalhas ou pontos guardados. Se você enviar, eles passam a ficar também no servidor, visíveis só para você, e aparecem nos seus outros aparelhos.</p>
+    <p>Este aparelho já tem orações, fotos, medalhas ou pontos guardados. Se você enviar, eles passam a ficar também no servidor, visíveis só para você, e aparecem nos seus outros aparelhos.</p>
     <p class="muted">Se escolher "Agora não", a sincronização fica pausada e você pode ativar depois em Ajustes.</p>
     <div class="row"><button class="btn grow" id="s-sim">Enviar para minha conta</button></div><div class="row"><button class="btn ghost grow" id="s-nao">Agora não</button></div></div>`;
   const uid = sessao.user.id;
@@ -134,7 +135,7 @@ function telaPrimeiraSync() {
 function telaOutraConta() {
   setTop("Outra conta neste aparelho", null);
   $("#view").innerHTML = `<div class="card"><h2 class="titulo-tela">Dados de outra conta</h2>
-    <p>Este aparelho guarda dados de outra conta. Para entrar com esta, eles precisam ser removidos daqui. Se já foram sincronizados, continuam guardados na conta de origem. As fotos do caderno ficam só neste aparelho e serão apagadas.</p>
+    <p>Este aparelho guarda dados de outra conta. Para entrar com esta, eles precisam ser removidos daqui. Se já foram sincronizados, continuam guardados na conta de origem. Fotos que ainda não foram sincronizadas serão perdidas.</p>
     <div class="row"><button class="btn grow" id="o-sim">Limpar este aparelho e entrar</button></div><div class="row"><button class="btn ghost grow" id="o-nao">Sair</button></div></div>`;
   $("#o-sim").onclick = async () => { const uid = sessao.user.id; db = dbVazio(db.config); apagaTodasFotos(); db.sync = { uid, pausada: false }; salvaLocal(); toast("Aparelho limpo."); await sincroniza(); telaInicio(); };
   $("#o-nao").onclick = async () => { await sb.auth.signOut({ scope: "local" }); telaInicio(); };
@@ -163,12 +164,14 @@ async function sincroniza() {
   try {
     migraCustomIds();
     const uid = sessao.user.id;
-    const [rE, rM, rA, rC, rP] = await Promise.all([
+    const [rE, rM, rA, rC, rP, rCfg, rF] = await Promise.all([
       sb.from("estudos").select("dia_id,passos,resumo,data,atualizado"),
       sb.from("medalhas").select("medalha_id,ganha_em"),
       sb.from("atividade").select("dia"),
       sb.from("passagens_custom").select("id,semana,tema,titulo,ref,texto"),
-      sb.from("profiles").select("stats,horas").eq("id", uid).maybeSingle()
+      sb.from("profiles").select("stats,horas").eq("id", uid).maybeSingle(),
+      sb.from("configuracoes").select("tema,modelo,atualizado,chave_ia_cifrada").eq("user_id", uid).maybeSingle(),
+      sb.from("fotos").select("id,dia_id,caminho")
     ]);
     if ([rE, rM, rA, rC, rP].some(r => r.error)) throw 0;
 
@@ -205,7 +208,17 @@ async function sincroniza() {
     db.stats.voz = st.voz; db.stats.quizzes = st.quizzes; db.stats.perfect = st.perfect; db.bonus = st.bonus; db.horas = { ...db.horas, ...hr };
     const mudouP = JSON.stringify(st) !== JSON.stringify(sS) || JSON.stringify(hr) !== JSON.stringify(sH);
 
+    // configurações (tema e modelo): o mais recente vence. A chave criptografada só é lida aqui, nunca escrita.
+    let subirCfg = null;
+    if (!rCfg.error) {
+      _chaveNuvem = rCfg.data?.chave_ia_cifrada || null;
+      const sAt = rCfg.data ? Date.parse(rCfg.data.atualizado) || 0 : 0, lAt = db.config.cfgAt || 0;
+      if (rCfg.data && sAt > lAt) { if (rCfg.data.tema) db.config.theme = rCfg.data.tema; if (rCfg.data.modelo) db.config.model = rCfg.data.modelo; db.config.cfgAt = sAt; aplicaTema(); }
+      else if (lAt > sAt) subirCfg = { user_id: uid, tema: db.config.theme || "auto", modelo: db.config.model || null, atualizado: new Date(lAt).toISOString() };
+    }
+
     const ops = [];
+    if (subirCfg) ops.push(sb.from("configuracoes").upsert(subirCfg, { onConflict: "user_id" }));
     if (subirE.length) ops.push(sb.from("estudos").upsert(subirE, { onConflict: "user_id,dia_id" }));
     if (subirM.length) ops.push(sb.from("medalhas").upsert(subirM, { onConflict: "user_id,medalha_id", ignoreDuplicates: true }));
     if (subirA.length) ops.push(sb.from("atividade").upsert(subirA, { onConflict: "user_id,dia", ignoreDuplicates: true }));
@@ -213,8 +226,12 @@ async function sincroniza() {
     if (mudouP) ops.push(sb.from("profiles").update({ stats: st, horas: hr }).eq("id", uid));
     if ((await Promise.all(ops)).some(r => r.error)) throw 0;
 
-    db.sync.ultimo = new Date().toISOString(); salvaLocal(); _syncOk = true;
-    setSyncMsg("Sincronizado às " + hhmm(new Date()) + ".");
+    // fotos do caderno (se a migração das fotos ainda não foi aplicada, esta parte é pulada)
+    let fotosOk = true;
+    if (!rF.error) { try { fotosOk = await sincronizaFotos(uid, rF.data || []); } catch { fotosOk = false; } }
+
+    db.sync.ultimo = new Date().toISOString(); salvaLocal(); _syncOk = fotosOk;
+    setSyncMsg("Sincronizado às " + hhmm(new Date()) + (fotosOk ? "." : ", mas algumas fotos ficaram para depois."));
     if (_key === "Lectio") telaInicio();
   } catch {
     setSyncMsg("Não foi possível sincronizar agora. Tentamos de novo mais tarde.");
@@ -222,6 +239,71 @@ async function sincroniza() {
     _syncando = false;
     if (_syncDeNovo) { _syncDeNovo = false; agendaSync(500); }
   }
+}
+
+// ---------- Chave da IA criptografada (só o aparelho conhece a senha de proteção) ----------
+const b64 = u8 => btoa(String.fromCharCode(...u8)), deB64 = s => Uint8Array.from(atob(s), ch => ch.charCodeAt(0));
+async function derivaChave(senha, salt, iteracoes) {
+  const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(senha), "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: iteracoes, hash: "SHA-256" }, base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+}
+async function cifraChave(chave, senha) {
+  const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12)), it = 600000;
+  const k = await derivaChave(senha, salt, it);
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, k, new TextEncoder().encode(chave)));
+  return { v: 1, kdf: "PBKDF2-SHA256", it, salt: b64(salt), iv: b64(iv), ct: b64(ct) };
+}
+async function decifraChave(o, senha) {
+  if (!o || o.v !== 1 || !(o.it >= 100000 && o.it <= 2000000)) throw new Error("formato");
+  const k = await derivaChave(senha, deB64(o.salt), o.it);
+  return new TextDecoder().decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: deB64(o.iv) }, k, deB64(o.ct)));
+}
+
+function chaveBoxHTML() {
+  const temLocal = !!db.config.geminiKey, temNuvem = !!_chaveNuvem;
+  if (_chaveNuvem === undefined) return `<p class="muted">Toque em "Sincronizar agora" para ver se há uma chave guardada na conta.</p>`;
+  const bot = [];
+  if (temLocal) bot.push(`<button class="btn ghost" id="k-guarda" type="button">${temNuvem ? "Atualizar cópia na conta" : "Guardar na conta"}</button>`);
+  if (temNuvem) bot.push(`<button class="btn ghost" id="k-recupera" type="button">Recuperar neste aparelho</button><button class="btn ghost" id="k-remove" type="button">Remover da conta</button>`);
+  return (bot.length ? `<div class="row">${bot.join("")}</div>` : `<p class="muted">Cole sua chave em "IA gratuita" mais abaixo, salve e volte aqui para guardá-la na conta.</p>`) + `<div id="k-form"></div>`;
+}
+
+function ligaChave() {
+  const q = id => document.getElementById(id), form = q("k-form"); if (!form) return;
+  const campo = (id, rotulo) => `<label for="${id}">${rotulo}</label><input id="${id}" type="password" autocomplete="new-password">`;
+  q("k-guarda")?.addEventListener("click", () => {
+    form.innerHTML = `<p class="muted">Crie uma senha de proteção (diferente da senha de login). Ela abre a sua chave em outro aparelho. Se esquecer, ninguém consegue recuperar: você só cola a chave de novo.</p>
+      ${campo("k1", "Senha de proteção")}${campo("k2", "Repita a senha de proteção")}<p id="k-msg" class="msg" role="alert"></p><div class="row"><button class="btn" id="k-ok" type="button">Guardar criptografada</button><button class="btn ghost" id="k-no" type="button">Cancelar</button></div>`;
+    q("k-no").onclick = telaAjustes;
+    q("k-ok").onclick = async () => {
+      const a = q("k1").value, b = q("k2").value, msg = t => { q("k-msg").textContent = t; };
+      if (a.length < 8) return msg("A senha de proteção precisa ter pelo menos 8 caracteres.");
+      if (a !== b) return msg("As duas senhas precisam ser iguais.");
+      q("k-ok").disabled = true; msg("Criptografando…");
+      try {
+        const obj = await cifraChave(db.config.geminiKey, a);
+        const r = await sb.from("configuracoes").upsert({ user_id: sessao.user.id, chave_ia_cifrada: obj, atualizado: new Date().toISOString() }, { onConflict: "user_id" });
+        if (r.error) throw 0;
+        _chaveNuvem = obj; toast("Chave guardada na conta, criptografada."); telaAjustes();
+      } catch { q("k-ok").disabled = false; msg("Não foi possível guardar agora. Confira a conexão e tente de novo."); }
+    };
+  });
+  q("k-recupera")?.addEventListener("click", () => {
+    form.innerHTML = `${campo("k1", "Senha de proteção")}<p id="k-msg" class="msg" role="alert"></p><div class="row"><button class="btn" id="k-ok" type="button">Recuperar</button><button class="btn ghost" id="k-no" type="button">Cancelar</button></div>`;
+    q("k-no").onclick = telaAjustes;
+    q("k-ok").onclick = async () => {
+      const msg = t => { q("k-msg").textContent = t; }; msg("");
+      if (!q("k1").value) return msg("Digite a senha de proteção.");
+      q("k-ok").disabled = true;
+      try { db.config.geminiKey = await decifraChave(_chaveNuvem, q("k1").value); salvaLocal(); toast("Chave recuperada neste aparelho."); telaAjustes(); }
+      catch { q("k-ok").disabled = false; msg("Senha de proteção incorreta."); }
+    };
+  });
+  q("k-remove")?.addEventListener("click", async () => {
+    const r = await sb.from("configuracoes").update({ chave_ia_cifrada: null }).eq("user_id", sessao.user.id);
+    if (r.error) { toast("Não foi possível remover agora. Tente de novo."); return; }
+    _chaveNuvem = null; toast("Cópia removida da conta."); telaAjustes();
+  });
 }
 
 // ---------- Telas de conta ----------
@@ -334,6 +416,7 @@ function contaCardHTML() {
   const msg = _syncMsg || (pausada ? "Sincronização pausada." : db.sync?.ultimo ? "Última sincronização às " + hhmm(new Date(db.sync.ultimo)) + "." : "");
   return `<div class="card" id="conta-box"><b>Conta</b><p>${esc(_perfilApelido || "Conectado")}<br><span class="muted">${esc(sessao.user.email || "")}</span></p><p class="muted" id="syncmsg" role="status">${esc(msg)}</p>
     <div class="row"><button class="btn ghost" id="c-sync">${pausada ? "Ativar sincronização" : "Sincronizar agora"}</button><button class="btn ghost" id="c-out">Sair</button></div><div id="c-extra"></div>
+    <h3 class="cuidado">Chave da IA na conta</h3><p class="muted">Guarde sua chave criptografada na conta para usar em outros aparelhos. Só a sua senha de proteção abre; nem nós conseguimos ler.</p><div id="k-box">${chaveBoxHTML()}</div>
     <h3 class="cuidado">Seus dados</h3>
     <div class="row"><button class="btn ghost" id="c-del">Apagar meus dados</button></div><div id="c-delbox"></div>
     ${EXCLUIR_CONTA_ATIVA ? `<div class="row"><button class="btn ghost" id="c-conta">Excluir minha conta</button></div><div id="c-contabox"></div>` : `<p class="muted">Excluir a conta por completo ainda não está disponível. Enquanto isso, "Apagar meus dados" remove tudo o que você guardou.</p>`}</div>`;
@@ -341,13 +424,14 @@ function contaCardHTML() {
 
 function ligaConta() {
   const q = id => document.getElementById(id);
+  ligaChave();
   q("c-in")?.addEventListener("click", () => telaConta("entrar"));
   q("c-sync")?.addEventListener("click", async () => {
     if (db.sync?.pausada) { db.sync.pausada = false; migraCustomIds(); salvaLocal(); }
     await sincroniza(); telaAjustes();
   });
   q("c-out")?.addEventListener("click", () => {
-    q("c-extra").innerHTML = `<p class="muted">Escolha o que fazer com os dados deste aparelho. Dados que não foram enviados para a conta serão perdidos se você limpar. As fotos do caderno ficam só neste aparelho e também serão apagadas.</p><div class="row"><button class="btn" id="o1">Sair e manter os dados aqui</button><button class="btn ghost" id="o2">Sair e limpar este aparelho</button><button class="btn ghost" id="o3">Cancelar</button></div>`;
+    q("c-extra").innerHTML = `<p class="muted">Escolha o que fazer com os dados deste aparelho. Dados que não foram enviados para a conta serão perdidos se você limpar. Fotos que ainda não foram sincronizadas também serão perdidas.</p><div class="row"><button class="btn" id="o1">Sair e manter os dados aqui</button><button class="btn ghost" id="o2">Sair e limpar este aparelho</button><button class="btn ghost" id="o3">Cancelar</button></div>`;
     q("o3").onclick = telaAjustes;
     q("o1").onclick = async () => { await sb.auth.signOut({ scope: "local" }); toast("Você saiu."); telaInicio(); };
     q("o2").onclick = async () => {
@@ -356,12 +440,13 @@ function ligaConta() {
     };
   });
   q("c-del")?.addEventListener("click", () => {
-    q("c-delbox").innerHTML = `<p class="muted">Isso apaga da sua conta e deste aparelho todos os estudos, medalhas, atividade, passagens e as fotos do caderno. Não dá para desfazer.</p><div class="row"><button class="btn" id="d1">Sim, apagar meus dados</button><button class="btn ghost" id="d2">Cancelar</button></div>`;
+    q("c-delbox").innerHTML = `<p class="muted">Isso apaga da sua conta e deste aparelho todos os estudos, medalhas, atividade, passagens, configurações e as fotos do caderno (inclusive os arquivos na conta). Não dá para desfazer.</p><div class="row"><button class="btn" id="d1">Sim, apagar meus dados</button><button class="btn ghost" id="d2">Cancelar</button></div>`;
     q("d2").onclick = telaAjustes;
     q("d1").onclick = async () => {
+      if (!(await apagaFotosDaConta())) { toast("Não foi possível apagar as fotos agora. Confira a conexão e tente de novo."); return; }
       const { error } = await sb.rpc("apagar_meus_dados");
       if (error) { toast("Não foi possível apagar agora. Confira a conexão e tente de novo."); return; }
-      const sy = db.sync; db = dbVazio(db.config); apagaTodasFotos(); db.sync = sy; salvaLocal(); toast("Seus dados foram apagados."); telaInicio();
+      const sy = { ...db.sync, fotosSinc: [], fotosApagar: [] }; _chaveNuvem = null; db = dbVazio(db.config); apagaTodasFotos(); db.sync = sy; salvaLocal(); toast("Seus dados foram apagados."); telaInicio();
     };
   });
   q("c-conta")?.addEventListener("click", () => {
