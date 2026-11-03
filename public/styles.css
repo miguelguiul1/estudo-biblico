@@ -177,3 +177,17 @@ label{display:block;margin:16px 0 6px;font:700 13px/1.2 var(--label);letter-spac
 :root[data-theme="dark"] .opt.certa{color:#2a1a05}
 .opt.errada{background:transparent;box-shadow:inset 0 0 0 2px var(--mute);color:var(--mute)}
 .fbk{margin:14px 0}
+
+.xpcard{background:var(--card);border-radius:22px;padding:16px 18px;margin-top:16px;box-shadow:var(--shadow)}
+.xprow{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.xprow b{font:400 22px/1.1 var(--display);color:var(--wt,var(--accent))}
+.xpcard .bar{color:var(--accent)}
+.xpcard p{margin:8px 0 0;font-size:15px}
+.xpcard h3{font:700 13px/1.2 var(--label);letter-spacing:.12em;text-transform:uppercase;color:var(--mute);margin:16px 0 8px}
+.missoes{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.missoes li{display:flex;align-items:center;gap:12px;min-height:36px}
+.missoes .chk{width:26px;height:26px;border-radius:50%;box-shadow:inset 0 0 0 2px var(--line);display:grid;place-items:center;flex:none;color:var(--paper)}
+.missoes .feita .chk{background:var(--accent);box-shadow:none}
+.missoes .chk .ico{width:16px;height:16px;stroke-width:3}
+.missoes .feita{color:var(--mute)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}

@@ -10,7 +10,7 @@ const STEPS = [
   { id: "actio", ic: "i-go", nome: "Actio", sub: "Compromisso", guia: "Que gesto concreto vou viver por causa desta Palavra?" }
 ];
 const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } };
-let db = Object.assign({ config: { geminiKey: "", model: "gemini-2.5-flash", theme: "auto" }, custom: [], estudos: {}, stats: { voz: 0, quizzes: 0, perfect: 0 }, medalhas: {}, atividade: {}, horas: {} }, load());
+let db = Object.assign({ config: { geminiKey: "", model: "gemini-2.5-flash", theme: "auto" }, custom: [], estudos: {}, stats: { voz: 0, quizzes: 0, perfect: 0 }, medalhas: {}, atividade: {}, horas: {}, diario: {}, bonus: 0, nivelVisto: 1 }, load());
 const save = () => localStorage.setItem(KEY, JSON.stringify(db));
 // Horas do dia: Laudes (manhã), Vésperas (tarde), Completas (noite)
 const periodo = () => { const t = db.config.theme; if (t === "light") return "laudes"; if (t === "dark") return "completas"; const h = new Date().getHours(); return h >= 5 && h < 12 ? "laudes" : h >= 12 && h < 18 ? "vesperas" : "completas"; };
@@ -65,6 +65,9 @@ function telaInicio() {
     <h2>Enchei-vos</h2><p class="sub">${saudacao()}. Hora de ${HORA[periodo()].split(" · ")[0]}.</p>`;
   if (prox) h += `<button class="today" data-d="${esc(prox.id)}"><span class="play">${ICO("i-play")}</span><span><strong>${esc(prox.titulo)}</strong><span>${feitos ? "Continuar de onde parou" : "Começar agora"}</span></span></button>`;
   h += `</section><div class="progress"><p>${feitos} de ${dias.length} dias rezados</p><div class="bar"><i style="width:${dias.length ? 100 * feitos / dias.length : 0}%"></i></div></div>`;
+  const xp = xpTotal(), nv = nivelDe(xp), dh = diarioHoje();
+  h += `<section class="xpcard"><div class="xprow"><b>Nível ${nv.n} · ${nv.nome}</b><span class="muted">${xp} XP</span></div><div class="bar"><i style="width:${Math.round(100 * nv.atual / nv.faixa)}%"></i></div><p class="muted">Faltam ${nv.falta} XP para o próximo nível.</p>
+    <h3>Missões de hoje</h3><ul class="missoes">${MISSOES.map(m => { const f = dh.feitas.includes(m.id) || m.ok(); return `<li class="${f ? "feita" : ""}"><span class="chk" aria-hidden="true">${f ? ICO("i-check") : ""}</span><span>${esc(m.txt)}${f ? '<span class="sr"> (feita)</span>' : ""}</span></li>`; }).join("")}</ul></section>`;
   h += `<div class="pair"><button class="tile" id="goMed">${ICO("i-trophy")}<span><b>Conquistas</b><small>${Object.keys(db.medalhas).length} de ${MEDALHAS.length} medalhas</small></span></button><button class="tile" id="goQuiz">${ICO("i-quiz")}<span><b>Quiz</b><small>brincar e aprender</small></span></button></div>`;
   h += `<h2 class="sec">As semanas</h2><div class="weeks">`;
   semanas.forEach((sm, i) => {
@@ -74,7 +77,7 @@ function telaInicio() {
   h += `</div><div class="row"><button class="btn" id="add">+ Passagem</button><button class="btn ghost" id="exp">Exportar tudo</button></div>`;
   if (livro.aviso) h += `<p class="muted">${esc(livro.aviso)}</p>`;
   $("#view").innerHTML = h;
-  document.querySelectorAll("[data-d]").forEach(el => el.onclick = () => telaSessao(el.dataset.d));
+  document.querySelectorAll("[data-d]").forEach(el => el.onclick = () => telaSessao(el.dataset.d, 0, "inicio"));
   document.querySelectorAll("[data-w]").forEach(el => el.onclick = () => telaSemana(el.dataset.w));
   $("#add").onclick = telaNova; $("#exp").onclick = exportar;
   $("#goMed").onclick = telaConquistas; $("#goQuiz").onclick = () => telaQuiz();
@@ -89,7 +92,7 @@ function telaSemana(id) {
     h += `<button class="day ${f ? "done" : ""}" style="--i:${i}" data-d="${esc(d.id)}"><span class="num">${f ? ICO("i-check") : esc(n.replace(/\D+/g, "") || "•")}</span><span class="nm"><b>${esc(r.join(" · ") || n)}</b><span>${esc(d.ref)}${db.estudos[d.id]?.data ? " · " + fmtData(db.estudos[d.id].data) : ""}</span></span><span class="go">${ICO("i-chev")}</span></button>`; });
   h += `</div>` + (quiz.some(q => q.s === sm.id) ? `<div class="row"><button class="btn ghost" id="qs">Quiz desta semana</button></div>` : "");
   $("#view").innerHTML = h;
-  document.querySelectorAll("[data-d]").forEach(el => el.onclick = () => telaSessao(el.dataset.d));
+  document.querySelectorAll("[data-d]").forEach(el => el.onclick = () => telaSessao(el.dataset.d, 0, "semana"));
   $("#qs")?.addEventListener("click", () => telaQuiz(sm.id));
 }
 
@@ -106,10 +109,12 @@ function telaNova() {
   };
 }
 
-function telaSessao(diaId, passo = 0) {
+let _orig = "semana";
+function telaSessao(diaId, passo = 0, origem) {
+  if (origem) _orig = origem;
   const d = acharDia(diaId); if (!d) return telaInicio();
   const e = db.estudos[diaId] ||= { diaId, passos: {}, atualizado: Date.now() };
-  setTop(d.titulo.split(" · ")[0] + " · " + d.semana.titulo, () => telaSemana(d.semana.id));
+  setTop(d.titulo.split(" · ")[0] + " · " + d.semana.titulo, () => (_orig === "inicio" ? telaInicio() : telaSemana(d.semana.id)));
   const p = STEPS[passo], titulo = d.titulo.split(" · ").slice(1).join(" · ");
   let h = `<div style="${wkStyle(d.semana.id)}"><div class="passage"><h2>${esc(titulo)}</h2><p class="meta">${esc(d.semana.titulo)} · ${esc(d.semana.tema)}</p>
     <p class="ref">${esc(d.ref) || "Sem referência"}</p>${linkBiblia(d.ref)}` +
@@ -156,7 +161,7 @@ function ligarMicrofone(btn, st, tx, guardar) {
     };
     rec.onend = () => { if (ativo) { try { rec.start(); } catch {} } };  // mantém ouvindo em pausas
     rec.onerror = ev => { if (ev.error === "not-allowed") { toast("Permita o microfone"); parar(); } else if (ev.error === "network") { toast("Ditado precisa de internet"); parar(); } };
-    ativo = true; db.stats.voz = (db.stats.voz || 0) + 1; save(); checkMedalhas(); btn.classList.add("rec"); btn.setAttribute("aria-pressed", "true"); wave?.classList.add("on"); st.textContent = "Ouvindo… toque para parar"; rec.start();
+    ativo = true; db.stats.voz = (db.stats.voz || 0) + 1; diarioHoje().voz++; save(); checkMedalhas(); btn.classList.add("rec"); btn.setAttribute("aria-pressed", "true"); wave?.classList.add("on"); st.textContent = "Ouvindo… toque para parar"; rec.start();
   };
 }
 
@@ -215,13 +220,43 @@ function telaAjustes() {
   $("#view").innerHTML = `<div class="card"><b>Aparência</b><p class="muted">Automático muda com a hora: manhã clara, tarde dourada, noite à luz de vela.</p><div class="seg" id="tema"><button data-t="auto" class="${(db.config.theme || "auto") === "auto" ? "on" : ""}">Auto</button><button data-t="light" class="${db.config.theme === "light" ? "on" : ""}">Claro</button><button data-t="dark" class="${db.config.theme === "dark" ? "on" : ""}">Noite</button></div></div>
   <div class="card"><b>IA gratuita (opcional)</b><p class="muted">Crie uma chave grátis em aistudio.google.com/apikey e cole aqui. Fica só neste aparelho. Sem chave, o app usa a organização local.</p>
   <label for="k">Chave Gemini</label><input id="k" type="password" value="${esc(db.config.geminiKey)}"><label for="m">Modelo</label><input id="m" value="${esc(db.config.model)}">
-  <p><button class="btn" id="ok">Salvar</button></p></div>`;
+  <p><button class="btn" id="ok">Salvar</button></p></div>
+  <div class="card"><b>Seus dados</b><p class="muted">Tudo fica só neste aparelho. Faça um backup para guardar ou levar para outro celular. A chave da IA não vai no backup.</p>
+  <div class="row"><button class="btn ghost" id="bk">Fazer backup</button><button class="btn ghost" id="rs">Restaurar</button><input id="rsf" type="file" accept="application/json,.json" hidden></div>
+  <div class="row" id="apg"><button class="btn ghost" id="ap">Apagar tudo</button></div></div>`;
   document.querySelectorAll("#tema button").forEach(b => b.onclick = () => { db.config.theme = b.dataset.t; save(); aplicaTema(); telaAjustes(); });
+  $("#bk").onclick = () => { const { config, ...resto } = db; const url = URL.createObjectURL(new Blob([JSON.stringify({ lectio: 1, ...resto }, null, 1)], { type: "application/json" })); Object.assign(document.createElement("a"), { href: url, download: "lectio-backup-" + hojeISO() + ".json" }).click(); setTimeout(() => URL.revokeObjectURL(url), 2000); toast("Backup gerado"); };
+  $("#rs").onclick = () => $("#rsf").click();
+  $("#rsf").onchange = async ev => { try { const j = JSON.parse(await ev.target.files[0].text()); if (!j.lectio || typeof j.estudos !== "object") throw 0; const { lectio, ...resto } = j; db = Object.assign(db, resto); save(); toast("Backup restaurado"); telaInicio(); } catch { toast("Esse arquivo não parece um backup do Lectio."); } };
+  $("#ap").onclick = () => { $("#apg").innerHTML = `<p class="muted grow">Isso apaga todos os seus estudos, medalhas e XP deste aparelho. Não dá para desfazer.</p><button class="btn" id="ap2">Sim, apagar tudo</button><button class="btn ghost" id="ap3">Cancelar</button>`; $("#ap3").onclick = telaAjustes; $("#ap2").onclick = () => { const cfg = db.config; db = { config: cfg, custom: [], estudos: {}, stats: { voz: 0, quizzes: 0, perfect: 0 }, medalhas: {}, atividade: {}, horas: {}, diario: {}, bonus: 0, nivelVisto: 1 }; save(); toast("Tudo apagado."); telaInicio(); }; };
   $("#ok").onclick = () => { db.config.geminiKey = $("#k").value.trim(); db.config.model = $("#m").value.trim() || "gemini-2.5-flash"; save(); toast("Salvo"); telaInicio(); };
 }
 
 // ---------- Medalhas e quiz ----------
 let quiz = [];
+// ---------- XP, níveis e missões do dia ----------
+const NIVEIS = ["Semente", "Broto", "Videira", "Fonte", "Luz", "Estrela"];
+const diarioHoje = () => { const h = hojeISO(); if (db.diario.data !== h) db.diario = { data: h, voz: 0, quiz: 0, feitas: [] }; return db.diario; };
+const feitoHoje = e => { const d = new Date(e.atualizado || 0); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate() === +hojeISO().replaceAll("-", ""); };
+const MISSOES = [
+  { id: "rezar", txt: "Reze um dia e organize suas ideias", ok: () => Object.values(db.estudos).some(e => e.resumo && feitoHoje(e)) },
+  { id: "etapas", txt: "Preencha as 5 etapas de um dia", ok: () => Object.values(db.estudos).some(e => feitoHoje(e) && STEPS.every(s => e.passos[s.id])) },
+  { id: "voz", txt: "Fale com o microfone", ok: () => diarioHoje().voz >= 1 },
+  { id: "quiz", txt: "Faça um quiz", ok: () => diarioHoje().quiz >= 1 }
+];
+function xpTotal() {
+  const ests = Object.values(db.estudos);
+  const passos = ests.reduce((n, e) => n + STEPS.filter(s => e.passos[s.id]).length, 0);
+  return ests.filter(e => e.resumo).length * 30 + passos * 5 + Object.keys(db.medalhas).length * 20 + db.stats.quizzes * 10 + db.stats.perfect * 15 + (db.bonus || 0);
+}
+function nivelDe(xp) { const n = Math.floor(Math.sqrt(xp / 50)) + 1, base = 50 * (n - 1) ** 2, topo = 50 * n ** 2; return { n, nome: NIVEIS[Math.min(n - 1, NIVEIS.length - 1)], atual: xp - base, faixa: topo - base, falta: topo - xp }; }
+function checkMissoes() {
+  const d = diarioHoje();
+  for (const m of MISSOES) if (!d.feitas.includes(m.id) && m.ok()) { d.feitas.push(m.id); db.bonus = (db.bonus || 0) + 10; save(); toast("Missão cumprida: " + m.txt + " (+10 XP)", 3600); }
+  const lv = nivelDe(xpTotal()).n;
+  if (lv > (db.nivelVisto || 1)) { db.nivelVisto = lv; save(); toast("Você subiu para o nível " + lv + ": " + nivelDe(xpTotal()).nome, 4200); }
+}
+
 const hojeISO = () => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`; };
 const MEDALHAS = [
   { id: "primeiro", nome: "Primeiro passo", desc: "Reze o seu primeiro dia.", ic: "i-play", ok: s => s.dias >= 1 },
@@ -250,6 +285,7 @@ function checkMedalhas() {
   const s = estado(); const novas = [];
   for (const m of MEDALHAS) if (!db.medalhas[m.id] && m.ok(s)) { db.medalhas[m.id] = hojeISO(); novas.push(m.nome); }
   if (novas.length) { save(); toast("Nova medalha: " + novas.join(", "), 3800); }
+  checkMissoes();
 }
 function registra() {
   const h = new Date().getHours();
@@ -277,7 +313,7 @@ function telaQuiz(semId) {
   const pinta = sm ? wkStyle(sm.id) : "";
   const fim = () => {
     window.scrollTo(0, 0);
-    db.stats.quizzes++; if (acertos === lista.length) db.stats.perfect++; save();
+    db.stats.quizzes++; diarioHoje().quiz++; if (acertos === lista.length) db.stats.perfect++; save();
     const frase = acertos === lista.length ? "Perfeito! A Palavra ficou no coração." : acertos >= lista.length / 2 ? "Muito bem! Vale reler os dias das que errou." : "Bom começo. Releia os dias e tente de novo.";
     $("#view").innerHTML = `<div style="${pinta}"><div class="qcard"><h2>${acertos} de ${lista.length}</h2><p>${frase}</p><div class="row"><button class="btn" id="again">Jogar de novo</button><button class="btn ghost" id="med">Ver conquistas</button></div></div></div>`;
     $("#again").onclick = () => telaQuiz(semId); $("#med").onclick = telaConquistas;
