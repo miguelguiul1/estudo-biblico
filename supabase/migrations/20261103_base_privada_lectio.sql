@@ -1,5 +1,8 @@
 -- Base privada do Lectio: cada pessoa só enxerga e altera as próprias linhas (RLS).
--- Ainda NÃO aplicada no projeto lectio-enchei-vos (dzmhpfzheojmljxlgigp): aguardando aprovação do dono.
+-- JÁ APLICADA no projeto lectio-enchei-vos (dzmhpfzheojmljxlgigp). Não reaplicar.
+-- Este arquivo foi conferido com o banco (tabelas, políticas RLS, funções e permissões).
+-- Diferença em relação à versão original: o gatilho cria o perfil só com o id (apelido fica vazio
+-- até a pessoa escolher um apelido no primeiro acesso).
 
 create table public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
@@ -64,7 +67,7 @@ create policy "dono_apaga_atividade" on public.atividade for delete to authentic
 create function public.cria_perfil() returns trigger
 language plpgsql security definer set search_path = '' as $$
 begin
-  insert into public.profiles (id, apelido) values (new.id, nullif(split_part(new.email, '@', 1), ''));
+  insert into public.profiles (id) values (new.id);
   return new;
 end $$;
 revoke execute on function public.cria_perfil() from public, anon, authenticated;
