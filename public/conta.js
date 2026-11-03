@@ -124,9 +124,9 @@ function telaPrimeiraSync() {
 function telaOutraConta() {
   setTop("Outra conta neste aparelho", null);
   $("#view").innerHTML = `<div class="card"><h2 class="titulo-tela">Dados de outra conta</h2>
-    <p>Este aparelho guarda dados de outra conta. Para entrar com esta, eles precisam ser removidos daqui. Se já foram sincronizados, continuam guardados na conta de origem.</p>
+    <p>Este aparelho guarda dados de outra conta. Para entrar com esta, eles precisam ser removidos daqui. Se já foram sincronizados, continuam guardados na conta de origem. As fotos do caderno ficam só neste aparelho e serão apagadas.</p>
     <div class="row"><button class="btn grow" id="o-sim">Limpar este aparelho e entrar</button></div><div class="row"><button class="btn ghost grow" id="o-nao">Sair</button></div></div>`;
-  $("#o-sim").onclick = async () => { const uid = sessao.user.id; db = dbVazio(db.config); db.sync = { uid, pausada: false }; salvaLocal(); toast("Aparelho limpo."); await sincroniza(); telaInicio(); };
+  $("#o-sim").onclick = async () => { const uid = sessao.user.id; db = dbVazio(db.config); apagaTodasFotos(); db.sync = { uid, pausada: false }; salvaLocal(); toast("Aparelho limpo."); await sincroniza(); telaInicio(); };
   $("#o-nao").onclick = async () => { await sb.auth.signOut({ scope: "local" }); telaInicio(); };
 }
 
@@ -166,7 +166,7 @@ async function sincroniza() {
     const srv = new Map((rE.data || []).map(r => [r.dia_id, r]));
     for (const r of rE.data || []) {
       const l = db.estudos[r.dia_id], st = Date.parse(r.atualizado) || 0;
-      if (!l || !temConteudo(l) || st > (l.atualizado || 0)) db.estudos[r.dia_id] = { diaId: r.dia_id, passos: r.passos || {}, ...(r.resumo ? { resumo: r.resumo } : {}), data: r.data || "", atualizado: st };
+      if (!l || !temConteudo(l) || st > (l.atualizado || 0)) db.estudos[r.dia_id] = { diaId: r.dia_id, passos: r.passos || {}, ...(r.resumo ? { resumo: r.resumo } : {}), data: r.data || "", atualizado: st, ...(l?.fotos ? { fotos: l.fotos } : {}) };
     }
     const subirE = [];
     for (const [id, l] of Object.entries(db.estudos)) {
@@ -274,21 +274,21 @@ function ligaConta() {
     await sincroniza(); telaAjustes();
   });
   q("c-out")?.addEventListener("click", () => {
-    q("c-extra").innerHTML = `<p class="muted">Escolha o que fazer com os dados deste aparelho. Dados que não foram enviados para a conta serão perdidos se você limpar.</p><div class="row"><button class="btn" id="o1">Sair e manter os dados aqui</button><button class="btn ghost" id="o2">Sair e limpar este aparelho</button><button class="btn ghost" id="o3">Cancelar</button></div>`;
+    q("c-extra").innerHTML = `<p class="muted">Escolha o que fazer com os dados deste aparelho. Dados que não foram enviados para a conta serão perdidos se você limpar. As fotos do caderno ficam só neste aparelho e também serão apagadas.</p><div class="row"><button class="btn" id="o1">Sair e manter os dados aqui</button><button class="btn ghost" id="o2">Sair e limpar este aparelho</button><button class="btn ghost" id="o3">Cancelar</button></div>`;
     q("o3").onclick = telaAjustes;
     q("o1").onclick = async () => { await sb.auth.signOut({ scope: "local" }); toast("Você saiu."); telaInicio(); };
     q("o2").onclick = async () => {
       if (!db.sync?.pausada) { await sincroniza(); if (!_syncOk) { toast("Não foi possível guardar na conta antes de limpar. Conecte-se e tente de novo."); return; } }
-      await sb.auth.signOut({ scope: "local" }); db = dbVazio(db.config); salvaLocal(); toast("Você saiu e o aparelho foi limpo."); telaInicio();
+      await sb.auth.signOut({ scope: "local" }); db = dbVazio(db.config); apagaTodasFotos(); salvaLocal(); toast("Você saiu e o aparelho foi limpo."); telaInicio();
     };
   });
   q("c-del")?.addEventListener("click", () => {
-    q("c-delbox").innerHTML = `<p class="muted">Isso apaga da sua conta e deste aparelho todos os estudos, medalhas, atividade e passagens. Não dá para desfazer.</p><div class="row"><button class="btn" id="d1">Sim, apagar meus dados</button><button class="btn ghost" id="d2">Cancelar</button></div>`;
+    q("c-delbox").innerHTML = `<p class="muted">Isso apaga da sua conta e deste aparelho todos os estudos, medalhas, atividade, passagens e as fotos do caderno. Não dá para desfazer.</p><div class="row"><button class="btn" id="d1">Sim, apagar meus dados</button><button class="btn ghost" id="d2">Cancelar</button></div>`;
     q("d2").onclick = telaAjustes;
     q("d1").onclick = async () => {
       const { error } = await sb.rpc("apagar_meus_dados");
       if (error) { toast("Não foi possível apagar agora. Confira a conexão e tente de novo."); return; }
-      const sy = db.sync; db = dbVazio(db.config); db.sync = sy; salvaLocal(); toast("Seus dados foram apagados."); telaInicio();
+      const sy = db.sync; db = dbVazio(db.config); apagaTodasFotos(); db.sync = sy; salvaLocal(); toast("Seus dados foram apagados."); telaInicio();
     };
   });
   q("c-conta")?.addEventListener("click", () => {
@@ -297,7 +297,7 @@ function ligaConta() {
     q("x1").onclick = async () => {
       const { error } = await sb.functions.invoke("excluir-conta", { method: "POST" });
       if (error) { toast("Não foi possível excluir agora. Tente de novo mais tarde."); return; }
-      await sb.auth.signOut({ scope: "local" }); db = dbVazio(db.config); salvaLocal(); toast("Conta excluída."); telaInicio();
+      await sb.auth.signOut({ scope: "local" }); db = dbVazio(db.config); apagaTodasFotos(); salvaLocal(); toast("Conta excluída."); telaInicio();
     };
   });
 }
