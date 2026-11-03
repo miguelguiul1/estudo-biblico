@@ -42,8 +42,8 @@ function telaInicio() {
   }
   h += `<h2>Semanas</h2>`;
   for (const s of todasSemanas()) {
-    h += `<div class="card"><b>${esc(s.titulo)}</b> <span class="muted">${esc(s.tema)}</span><div class="row" style="margin-top:10px">`;
-    for (const d of s.dias) h += `<button class="btn ghost" data-d="${esc(d.id)}">${esc(d.titulo)}${db.estudos[d.id]?.resumo ? " ✓" : ""}</button>`;
+    h += `<div class="card"><b>${esc(s.titulo)}</b><div class="muted">${esc(s.tema)}</div><div class="days">`;
+    for (const d of s.dias) { const [n, ...r] = d.titulo.split(" · "); h += `<button class="day" data-d="${esc(d.id)}"><span class="num">${esc(n.replace(/\D+/g, "") || "•")}</span><span class="grow">${esc(r.join(" · ") || n)}</span><span class="ok">${db.estudos[d.id]?.resumo ? "✓" : "›"}</span></button>`; }
     h += `</div></div>`;
   }
   h += `<button class="btn" id="add">+ Passagem</button> <button class="btn ghost" id="exp">Exportar tudo</button>`;
@@ -69,9 +69,9 @@ function telaNova() {
 function telaSessao(diaId, passo = 0) {
   const d = acharDia(diaId); if (!d) return telaInicio();
   const e = db.estudos[diaId] ||= { diaId, passos: {}, atualizado: Date.now() };
-  setTop(`${d.semana.titulo} · ${d.titulo}`, telaInicio);
+  setTop(d.titulo.split(" · ")[0] + " · " + d.semana.titulo.replace("ª Semana", "ª sem."), telaInicio);
   const p = STEPS[passo];
-  let h = `<div class="card"><div class="muted">${esc(d.ref) || "Sem referência"}</div>` +
+  let h = `<div class="card"><b>${esc(d.titulo.split(" · ").slice(1).join(" · "))}</b><div class="muted">${esc(d.ref) || "Sem referência"}</div>` +
     (d.texto ? `<p class="passage">${esc(d.texto)}</p>` : `<p class="muted">Leia na sua Bíblia / Enchei-vos${d.pagina ? " (pág. " + esc(d.pagina) + ")" : ""}.</p>`) + (d.foco ? `<p class="muted">${esc(d.foco)}</p>` : "") + `</div>`;
   h += `<div class="steps">` + STEPS.map((s, i) => `<button class="step ${i === passo ? "on" : ""} ${e.passos[s.id] ? "done" : ""}" data-i="${i}">${s.nome}</button>`).join("") + `</div>`;
   h += `<h2>${p.nome} <span class="muted">· ${p.sub}</span></h2><p class="guide">${p.guia}</p>
