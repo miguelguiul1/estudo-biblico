@@ -4,8 +4,8 @@
   "description": "Lectio Divina por voz, offline, com o roteiro do Enchei-vos.",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#14100d",
-  "theme_color": "#14100d",
+  "background_color": "#b3264a",
+  "theme_color": "#b3264a",
   "lang": "pt-BR",
   "icons": [{"src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}]
 }

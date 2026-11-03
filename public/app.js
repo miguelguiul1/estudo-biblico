@@ -32,25 +32,34 @@ function todasSemanas() {
 const acharDia = id => todasSemanas().flatMap(s => s.dias.map(d => ({ ...d, semana: s }))).find(d => d.id === id);
 
 // ---------- Telas ----------
+function ordinal(t){return (t.split(" · ")[0]||"").replace(/\s+/g," ")}
 function telaInicio() {
-  setTop("Lectio · Enchei-vos");
-  const recentes = Object.values(db.estudos).sort((a, b) => b.atualizado - a.atualizado).slice(0, 5);
-  let h = `<p class="muted">Reze com a Bíblia na mão. Fale — o app escuta e organiza.</p>`;
-  if (recentes.length) {
-    h += `<h2>Continuar</h2>`;
-    for (const e of recentes) { const d = acharDia(e.diaId); if (d) h += `<div class="card tap" data-d="${esc(d.id)}"><b>${esc(d.semana.titulo)} · ${esc(d.titulo)}</b><div class="muted">${esc(d.ref)}</div></div>`; }
+  setTop("Lectio", null);
+  const semanas = todasSemanas();
+  const dias = semanas.flatMap(s => s.dias.map(d => ({ ...d, semana: s })));
+  const feitos = dias.filter(d => db.estudos[d.id]?.resumo).length;
+  const prox = dias.find(d => !db.estudos[d.id]?.resumo) || dias[0];
+  const C = 2 * Math.PI * 26, off = C * (1 - (dias.length ? feitos / dias.length : 0));
+  let h = `<section class="hero"><svg class="flame" aria-hidden="true"><use href="#flame"/></svg>
+    <h2>Enchei-vos</h2><p class="eyebrow">Seminário de Vida no Espírito Santo</p>
+    <div class="progress"><svg class="ring" viewBox="0 0 60 60" aria-hidden="true"><circle class="bg" cx="30" cy="30" r="26"/><circle class="fg" cx="30" cy="30" r="26" stroke-dasharray="${C}" stroke-dashoffset="${C}" data-off="${off}"/></svg>
+    <div><b>${feitos}/${dias.length}</b><span>dias rezados</span></div></div>`;
+  if (prox) h += `<button class="cta" data-d="${esc(prox.id)}"><small>${feitos ? "Continuar" : "Começar"} · ${esc(ordinal(prox.titulo))}</small><strong>${esc(prox.titulo.split(" · ").slice(1).join(" · "))}</strong></button>`;
+  h += `</section>`;
+  for (const s of semanas) {
+    const ok = s.dias.filter(d => db.estudos[d.id]?.resumo).length;
+    const aberta = prox && s.id === prox.semana.id;
+    h += `<details class="week" ${aberta ? "open" : ""}><summary><div class="wtitle"><span class="ribbon">${esc(s.titulo)}</span><span class="tema">${esc(s.tema)}</span></div><span class="wcount">${ok}/${s.dias.length}</span><i class="chev"></i></summary><div class="days">`;
+    s.dias.forEach((d, i) => { const [n, ...r] = d.titulo.split(" · "); const f = !!db.estudos[d.id]?.resumo;
+      h += `<button class="day ${f ? "done" : ""}" style="--i:${i}" data-d="${esc(d.id)}"><span class="num">${f ? "✓" : esc(n.replace(/\D+/g, "") || "•")}</span><span class="nm">${esc(r.join(" · ") || n)}</span><span class="go">›</span></button>`; });
+    h += `</div></details>`;
   }
-  h += `<h2>Semanas</h2>`;
-  for (const s of todasSemanas()) {
-    h += `<div class="card"><b>${esc(s.titulo)}</b><div class="muted">${esc(s.tema)}</div><div class="days">`;
-    for (const d of s.dias) { const [n, ...r] = d.titulo.split(" · "); h += `<button class="day" data-d="${esc(d.id)}"><span class="num">${esc(n.replace(/\D+/g, "") || "•")}</span><span class="grow">${esc(r.join(" · ") || n)}</span><span class="ok">${db.estudos[d.id]?.resumo ? "✓" : "›"}</span></button>`; }
-    h += `</div></div>`;
-  }
-  h += `<button class="btn" id="add">+ Passagem</button> <button class="btn ghost" id="exp">Exportar tudo</button>`;
+  h += `<div class="row"><button class="btn" id="add">+ Passagem</button><button class="btn ghost" id="exp">Exportar tudo</button></div>`;
   if (livro.aviso) h += `<p class="muted">${esc(livro.aviso)}</p>`;
   $("#view").innerHTML = h;
   document.querySelectorAll("[data-d]").forEach(el => el.onclick = () => telaSessao(el.dataset.d));
   $("#add").onclick = telaNova; $("#exp").onclick = exportar;
+  requestAnimationFrame(() => requestAnimationFrame(() => { const fg = document.querySelector(".ring .fg"); if (fg) fg.style.strokeDashoffset = fg.dataset.off; }));
 }
 
 function telaNova() {
@@ -71,16 +80,19 @@ function telaSessao(diaId, passo = 0) {
   const e = db.estudos[diaId] ||= { diaId, passos: {}, atualizado: Date.now() };
   setTop(d.titulo.split(" · ")[0] + " · " + d.semana.titulo.replace("ª Semana", "ª sem."), telaInicio);
   const p = STEPS[passo];
-  let h = `<div class="card"><b>${esc(d.titulo.split(" · ").slice(1).join(" · "))}</b><div class="muted">${esc(d.ref) || "Sem referência"}</div>` +
-    (d.texto ? `<p class="passage">${esc(d.texto)}</p>` : `<p class="muted">Leia na sua Bíblia / Enchei-vos${d.pagina ? " (pág. " + esc(d.pagina) + ")" : ""}.</p>`) + (d.foco ? `<p class="muted">${esc(d.foco)}</p>` : "") + `</div>`;
-  h += `<div class="steps">` + STEPS.map((s, i) => `<button class="step ${i === passo ? "on" : ""} ${e.passos[s.id] ? "done" : ""}" data-i="${i}">${s.nome}</button>`).join("") + `</div>`;
-  h += `<h2>${p.nome} <span class="muted">· ${p.sub}</span></h2><p class="guide">${p.guia}</p>
-  <button class="mic" id="mic" aria-label="Gravar">🎙</button><div class="status muted" id="st">Toque para falar</div>
+  let h = `<div class="passage"><span class="ribbon">${esc(d.semana.titulo)}</span><h3>${esc(d.titulo.split(" · ").slice(1).join(" · "))}</h3>
+    <p class="ref">${esc(d.ref) || "Sem referência"}</p>` +
+    (d.texto ? `<p style="font-style:italic;white-space:pre-wrap">${esc(d.texto)}</p>` : `<p>Leia na sua Bíblia / Enchei-vos${d.pagina ? " (pág. " + esc(d.pagina) + ")" : ""}.</p>`) +
+    (d.foco ? `<p>${esc(d.foco)}</p>` : "") + `</div>`;
+  h += `<div class="stepper">` + STEPS.map((s, i) => `<button class="step ${i === passo ? "on" : ""} ${e.passos[s.id] ? "done" : ""}" data-i="${i}"><i></i>${s.nome}</button>`).join("") + `</div>`;
+  h += `<section class="stage"><h2>${p.nome}</h2><span class="sub">${p.sub}</span><p class="guide">${p.guia}</p>
+  <div class="micwrap"><button class="mic" id="mic" aria-label="Gravar"><svg aria-hidden="true"><use href="#mic"/></svg></button>
+  <div class="wave" id="wave" aria-hidden="true"><b></b><b></b><b></b><b></b><b></b><b></b><b></b></div><div class="status" id="st">Toque para falar</div></div>
   <textarea id="tx" placeholder="O que você falar aparece aqui. Pode editar.">${esc(e.passos[p.id] || "")}</textarea>
-  <div class="row" style="margin-top:12px"><button class="btn ghost grow" id="prev" ${passo === 0 ? "disabled" : ""}>‹ Anterior</button>
-  <button class="btn grow" id="next">${passo === STEPS.length - 1 ? "Concluir" : "Próxima ›"}</button></div>`;
-  h += `<h2>Resumo</h2>` + (e.resumo ? resumoHTML(e.resumo) : `<p class="muted">Ao terminar, organize suas ideias.</p>`) +
-    `<button class="btn" id="org">✨ Organizar minhas ideias</button> <button class="btn ghost" id="copy">Copiar</button>`;
+  <div class="row"><button class="btn ghost grow" id="prev" ${passo === 0 ? "disabled" : ""}>‹ Anterior</button>
+  <button class="btn grow" id="next">${passo === STEPS.length - 1 ? "Concluir" : "Próxima ›"}</button></div></section>`;
+  h += `<h2 class="sec">Resumo</h2>` + (e.resumo ? resumoHTML(e.resumo) : `<p class="muted">Ao terminar, organize suas ideias.</p>`) +
+    `<div class="row"><button class="btn" id="org">✨ Organizar minhas ideias</button><button class="btn ghost" id="copy">Copiar</button></div>`;
   $("#view").innerHTML = h;
   const tx = $("#tx");
   const guardar = () => { e.passos[p.id] = tx.value.trim(); e.atualizado = Date.now(); save(); };
@@ -98,7 +110,8 @@ function ligarMicrofone(btn, st, tx, guardar) {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) { st.textContent = "Seu navegador não tem ditado. Use o microfone do teclado."; btn.disabled = true; return; }
   let rec = null, ativo = false;
-  const parar = () => { ativo = false; rec?.stop(); btn.classList.remove("rec"); st.textContent = "Toque para falar"; };
+  const wave = document.getElementById("wave");
+  const parar = () => { ativo = false; rec?.stop(); btn.classList.remove("rec"); wave?.classList.remove("on"); st.textContent = "Toque para falar"; };
   btn.onclick = () => {
     if (ativo) return parar();
     rec = new SR(); rec.lang = "pt-BR"; rec.continuous = true; rec.interimResults = true;
@@ -110,7 +123,7 @@ function ligarMicrofone(btn, st, tx, guardar) {
     };
     rec.onend = () => { if (ativo) { try { rec.start(); } catch {} } };  // mantém ouvindo em pausas
     rec.onerror = ev => { if (ev.error === "not-allowed") { toast("Permita o microfone"); parar(); } else if (ev.error === "network") { toast("Ditado precisa de internet"); parar(); } };
-    ativo = true; btn.classList.add("rec"); st.textContent = "Ouvindo… toque para parar"; rec.start();
+    ativo = true; btn.classList.add("rec"); wave?.classList.add("on"); st.textContent = "Ouvindo… toque para parar"; rec.start();
   };
 }
 
