@@ -150,3 +150,30 @@ label{display:block;margin:16px 0 6px;font:700 13px/1.2 var(--label);letter-spac
 .daterow{display:flex;gap:10px;align-items:center}
 .daterow input{flex:1;min-width:0}
 .daterow .btn{padding:0 20px}
+
+/* conquistas e quiz */
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+.tile{display:flex;align-items:center;gap:10px;min-height:68px;text-align:left;border:0;border-radius:18px;padding:12px 14px;background:var(--card);box-shadow:var(--shadow)}
+.tile .ico{width:26px;height:26px;color:var(--accent)}
+.tile b{display:block;font-weight:600;line-height:1.2}
+.tile small{display:block;font-size:13px;color:var(--mute);line-height:1.3}
+.medals{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+.medal{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;padding:16px 10px;border-radius:20px;background:var(--card);box-shadow:var(--shadow)}
+.medal b{font-weight:600;line-height:1.2}
+.medal .muted{font-size:14px;line-height:1.3}
+.disc{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;background:var(--soft);color:var(--mute);box-shadow:inset 0 0 0 2px var(--line)}
+.disc .ico{width:28px;height:28px}
+.medal:not(.got) .disc{opacity:.7}
+.medal.got .disc{background:linear-gradient(145deg,#f5c453,#b8741a);color:#3a2204;box-shadow:0 6px 16px #b8741a55;animation:pop .6s cubic-bezier(.16,1,.3,1)}
+@keyframes pop{from{transform:scale(.6) rotate(-12deg)}to{transform:none}}
+.qbar{color:var(--accent);margin:6px 0 14px}
+.qcard{background:var(--card);border-radius:22px;padding:18px;box-shadow:var(--shadow)}
+.qcard h2{font:600 20px/1.35 var(--body);margin:0 0 14px;color:var(--ink)}
+.opts{display:grid;gap:10px}
+.opt{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:56px;text-align:left;border:0;border-radius:16px;padding:12px 16px;background:var(--soft);font-size:17px;line-height:1.3}
+.opt small{font:700 12px/1.2 var(--label);letter-spacing:.06em;text-transform:uppercase}
+.opt:not(:disabled):active{transform:scale(.985)}
+.opt.certa{background:var(--accent);color:var(--paper)}
+:root[data-theme="dark"] .opt.certa{color:#2a1a05}
+.opt.errada{background:transparent;box-shadow:inset 0 0 0 2px var(--mute);color:var(--mute)}
+.fbk{margin:14px 0}
