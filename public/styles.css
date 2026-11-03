@@ -191,3 +191,12 @@ label{display:block;margin:16px 0 6px;font:700 13px/1.2 var(--label);letter-spac
 .missoes .chk .ico{width:16px;height:16px;stroke-width:3}
 .missoes .feita{color:var(--mute)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+/* conta */
+.msg{min-height:22px;margin:8px 0 0;color:var(--accent);font-size:16px}
+.legal{max-height:190px;overflow:auto;margin:14px 0 4px;padding:12px 14px;background:var(--soft);border-radius:16px;font-size:15px}
+.legal p{margin:0 0 8px}
+.check{display:flex;align-items:flex-start;gap:12px;min-height:48px;margin:10px 0 0;font:400 17px/1.4 var(--body);letter-spacing:0;text-transform:none;color:var(--ink)}
+input[type=checkbox]{width:26px;min-height:26px;height:26px;flex:none;padding:0;margin:2px 0 0;accent-color:var(--accent)}
+.titulo-tela{font:400 30px/1.15 var(--display);color:var(--accent);margin:0 0 8px}
+.cuidado{font:700 13px/1.2 var(--label);letter-spacing:.12em;text-transform:uppercase;color:var(--mute);margin:20px 0 4px}

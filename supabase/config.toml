@@ -1,0 +1,5 @@
+# Configuração mínima das funções do projeto lectio-enchei-vos.
+project_id = "dzmhpfzheojmljxlgigp"
+
+[functions.excluir-conta]
+verify_jwt = true

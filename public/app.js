@@ -11,7 +11,8 @@ const STEPS = [
 ];
 const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } };
 let db = Object.assign({ config: { geminiKey: "", model: "gemini-2.5-flash", theme: "auto" }, custom: [], estudos: {}, stats: { voz: 0, quizzes: 0, perfect: 0 }, medalhas: {}, atividade: {}, horas: {}, diario: {}, bonus: 0, nivelVisto: 1 }, load());
-const save = () => localStorage.setItem(KEY, JSON.stringify(db));
+const salvaLocal = () => { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch {} };
+const save = () => { salvaLocal(); if (typeof agendaSync === "function") agendaSync(); };
 // Horas do dia: Laudes (manhã), Vésperas (tarde), Completas (noite)
 const periodo = () => { const t = db.config.theme; if (t === "light") return "laudes"; if (t === "dark") return "completas"; const h = new Date().getHours(); return h >= 5 && h < 12 ? "laudes" : h >= 12 && h < 18 ? "vesperas" : "completas"; };
 const HORA = { laudes: "Laudes · manhã", vesperas: "Vésperas · tarde", completas: "Completas · noite" };
@@ -104,7 +105,7 @@ function telaNova() {
   $("#ok").onclick = () => {
     const s = $("#n-s").value.trim(), d = $("#n-d").value.trim();
     if (!s || !d) return toast("Preencha semana e dia");
-    db.custom.push({ id: "c" + Date.now(), semana: s, tema: $("#n-t").value.trim(), titulo: d, ref: $("#n-r").value.trim(), texto: $("#n-x").value.trim() });
+    db.custom.push({ id: uuid(), semana: s, tema: $("#n-t").value.trim(), titulo: d, ref: $("#n-r").value.trim(), texto: $("#n-x").value.trim() });
     save(); telaInicio();
   };
 }
@@ -217,18 +218,19 @@ function exportar() {
 }
 function telaAjustes() {
   setTop("Ajustes", telaInicio);
-  $("#view").innerHTML = `<div class="card"><b>Aparência</b><p class="muted">Automático muda com a hora: manhã clara, tarde dourada, noite à luz de vela.</p><div class="seg" id="tema"><button data-t="auto" class="${(db.config.theme || "auto") === "auto" ? "on" : ""}">Auto</button><button data-t="light" class="${db.config.theme === "light" ? "on" : ""}">Claro</button><button data-t="dark" class="${db.config.theme === "dark" ? "on" : ""}">Noite</button></div></div>
+  $("#view").innerHTML = contaCardHTML() + `<div class="card"><b>Aparência</b><p class="muted">Automático muda com a hora: manhã clara, tarde dourada, noite à luz de vela.</p><div class="seg" id="tema"><button data-t="auto" class="${(db.config.theme || "auto") === "auto" ? "on" : ""}">Auto</button><button data-t="light" class="${db.config.theme === "light" ? "on" : ""}">Claro</button><button data-t="dark" class="${db.config.theme === "dark" ? "on" : ""}">Noite</button></div></div>
   <div class="card"><b>IA gratuita (opcional)</b><p class="muted">Crie uma chave grátis em aistudio.google.com/apikey e cole aqui. Fica só neste aparelho. Sem chave, o app usa a organização local.</p>
   <label for="k">Chave Gemini</label><input id="k" type="password" value="${esc(db.config.geminiKey)}"><label for="m">Modelo</label><input id="m" value="${esc(db.config.model)}">
   <p><button class="btn" id="ok">Salvar</button></p></div>
   <div class="card"><b>Seus dados</b><p class="muted">Tudo fica só neste aparelho. Faça um backup para guardar ou levar para outro celular. A chave da IA não vai no backup.</p>
   <div class="row"><button class="btn ghost" id="bk">Fazer backup</button><button class="btn ghost" id="rs">Restaurar</button><input id="rsf" type="file" accept="application/json,.json" hidden></div>
-  <div class="row" id="apg"><button class="btn ghost" id="ap">Apagar tudo</button></div></div>`;
+  ${sessao ? "" : `<div class="row" id="apg"><button class="btn ghost" id="ap">Apagar tudo</button></div>`}</div>`;
+  ligaConta();
   document.querySelectorAll("#tema button").forEach(b => b.onclick = () => { db.config.theme = b.dataset.t; save(); aplicaTema(); telaAjustes(); });
-  $("#bk").onclick = () => { const { config, ...resto } = db; const url = URL.createObjectURL(new Blob([JSON.stringify({ lectio: 1, ...resto }, null, 1)], { type: "application/json" })); Object.assign(document.createElement("a"), { href: url, download: "lectio-backup-" + hojeISO() + ".json" }).click(); setTimeout(() => URL.revokeObjectURL(url), 2000); toast("Backup gerado"); };
+  $("#bk").onclick = () => { const { config, sync, ...resto } = db; const url = URL.createObjectURL(new Blob([JSON.stringify({ lectio: 1, ...resto }, null, 1)], { type: "application/json" })); Object.assign(document.createElement("a"), { href: url, download: "lectio-backup-" + hojeISO() + ".json" }).click(); setTimeout(() => URL.revokeObjectURL(url), 2000); toast("Backup gerado"); };
   $("#rs").onclick = () => $("#rsf").click();
-  $("#rsf").onchange = async ev => { try { const j = JSON.parse(await ev.target.files[0].text()); if (!j.lectio || typeof j.estudos !== "object") throw 0; const { lectio, ...resto } = j; db = Object.assign(db, resto); save(); toast("Backup restaurado"); telaInicio(); } catch { toast("Esse arquivo não parece um backup do Lectio."); } };
-  $("#ap").onclick = () => { $("#apg").innerHTML = `<p class="muted grow">Isso apaga todos os seus estudos, medalhas e XP deste aparelho. Não dá para desfazer.</p><button class="btn" id="ap2">Sim, apagar tudo</button><button class="btn ghost" id="ap3">Cancelar</button>`; $("#ap3").onclick = telaAjustes; $("#ap2").onclick = () => { const cfg = db.config; db = { config: cfg, custom: [], estudos: {}, stats: { voz: 0, quizzes: 0, perfect: 0 }, medalhas: {}, atividade: {}, horas: {}, diario: {}, bonus: 0, nivelVisto: 1 }; save(); toast("Tudo apagado."); telaInicio(); }; };
+  $("#rsf").onchange = async ev => { try { const j = JSON.parse(await ev.target.files[0].text()); if (!j.lectio || typeof j.estudos !== "object") throw 0; const { lectio, sync, config, ...resto } = j; db = Object.assign(db, resto); save(); toast("Backup restaurado"); telaInicio(); } catch { toast("Esse arquivo não parece um backup do Lectio."); } };
+  const ap0 = $("#ap"); if (ap0) ap0.onclick = () => { $("#apg").innerHTML = `<p class="muted grow">Isso apaga todos os seus estudos, medalhas e XP deste aparelho. Não dá para desfazer.</p><button class="btn" id="ap2">Sim, apagar tudo</button><button class="btn ghost" id="ap3">Cancelar</button>`; $("#ap3").onclick = telaAjustes; $("#ap2").onclick = () => { const cfg = db.config; db = { config: cfg, custom: [], estudos: {}, stats: { voz: 0, quizzes: 0, perfect: 0 }, medalhas: {}, atividade: {}, horas: {}, diario: {}, bonus: 0, nivelVisto: 1 }; save(); toast("Tudo apagado."); telaInicio(); }; };
   $("#ok").onclick = () => { db.config.geminiKey = $("#k").value.trim(); db.config.model = $("#m").value.trim() || "gemini-2.5-flash"; save(); toast("Salvo"); telaInicio(); };
 }
 
