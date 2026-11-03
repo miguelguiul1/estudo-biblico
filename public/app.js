@@ -20,7 +20,7 @@ const aplicaTema = () => { const p = periodo(), r = document.documentElement; r.
 const linkBiblia = ref => ref ? `<a class="bible" target="_blank" rel="noopener" href="https://www.biblegateway.com/passage/?search=${encodeURIComponent(ref.replace(/(\d),(\d)/g, "$1:$2").replace(/\s*\(.*?\)/g, ""))}">Abrir na Bíblia ↗</a>` : "";
 aplicaTema();
 // cada semana tem sua cor e ícone (ciclo de 7)
-const WK = [["#b3264a","#f0803a","i-book"],["#e8702a","#f5b942","i-heart"],["#1f9d8b","#7ed6a8","i-leaf"],["#d6457a","#ff9bb5","i-heart"],["#6c4bc1","#ae92ec","i-scroll"],["#b01f3e","#e0604a","i-cross"],["#2f6fd1","#7fb8f5","i-dove"]];
+const WK = [["#9f1d3f","#c2441f","i-book"],["#b45309","#92400e","i-heart"],["#0f766e","#166534","i-leaf"],["#be185d","#9d174d","i-heart"],["#6d28d9","#4c1d95","i-scroll"],["#9f1239","#7f1d1d","i-cross"],["#1d4ed8","#1e3a8a","i-dove"]];
 const wkIdx = id => { const m = String(id).match(/\d+/); return m ? (+m[0] - 1) % 7 : 0; };
 const wkStyle = id => { const [a, b] = WK[wkIdx(id)]; return `--w1:${a};--w2:${b}`; };
 const wkIcon = id => WK[wkIdx(id)][2];
@@ -29,7 +29,14 @@ let livro = { semanas: [], aviso: "" };
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const toast = m => { const t = $("#toast"); t.textContent = m; t.classList.add("show"); setTimeout(() => t.classList.remove("show"), 2200); };
-const setTop = (title, back) => { window.scrollTo(0, 0); $("#title").textContent = title; const b = $("#back"); b.hidden = !back; b.onclick = back || null; };
+let _key = "", _back = null, _viaPop = false;
+const setTop = (title, back) => {
+  window.scrollTo(0, 0); $("#title").textContent = title; document.title = title === "Lectio" ? "Lectio – Enchei-vos" : title + " – Lectio";
+  const b = $("#back"); b.hidden = !back; _back = back || null; b.onclick = back ? () => history.back() : null;
+  if (back && title !== _key) { _viaPop ? history.replaceState({ n: 1 }, "") : history.pushState({ n: 1 }, ""); }
+  _key = title; _viaPop = false;
+};
+window.addEventListener("popstate", () => { _viaPop = true; (_back || telaInicio)(); });
 $("#cfg").onclick = () => telaAjustes();
 
 // ---------- Biblioteca (Enchei-vos + passagens do usuário) ----------
@@ -53,15 +60,14 @@ function telaInicio() {
   const dias = semanas.flatMap(s => s.dias.map(d => ({ ...d, semana: s })));
   const feitos = dias.filter(d => db.estudos[d.id]?.resumo).length;
   const prox = dias.find(d => !db.estudos[d.id]?.resumo) || dias[0];
-  let h = `<section class="hero" style="${prox ? wkStyle(prox.semana.id) : ""}"><div class="rays"></div>
-    <p class="greet">${saudacao()} · ${HORA[periodo()]}</p><svg class="flame" aria-hidden="true"><use href="#flame"/></svg>
-    <h2>Enchei-vos</h2><p class="sub">Que a Palavra de hoje te encontre.</p>`;
-  if (prox) h += `<button class="today" data-d="${esc(prox.id)}"><span class="play">${ICO("i-play")}</span><span><small>${feitos ? "Continuar de onde parou" : "Começar agora"}</small><strong>${esc(prox.titulo)}</strong></span></button>`;
-  h += `</section><div class="stats"><div class="stat"><b>${feitos}</b><span>dias rezados</span></div><div class="stat"><b>${dias.length - feitos}</b><span>para rezar</span></div></div>`;
+  let h = `<section class="hero"><svg class="flame" aria-hidden="true"><use href="#flame"/></svg>
+    <h2>Enchei-vos</h2><p class="sub">${saudacao()}. Hora de ${HORA[periodo()].split(" · ")[0]}.</p>`;
+  if (prox) h += `<button class="today" data-d="${esc(prox.id)}"><span class="play">${ICO("i-play")}</span><span><strong>${esc(prox.titulo)}</strong><span>${feitos ? "Continuar de onde parou" : "Começar agora"}</span></span></button>`;
+  h += `</section><div class="progress"><p>${feitos} de ${dias.length} dias rezados</p><div class="bar"><i style="width:${dias.length ? 100 * feitos / dias.length : 0}%"></i></div></div>`;
   h += `<h2 class="sec">As semanas</h2><div class="weeks">`;
   semanas.forEach((sm, i) => {
     const ok = sm.dias.filter(d => db.estudos[d.id]?.resumo).length, pct = sm.dias.length ? Math.round(100 * ok / sm.dias.length) : 0;
-    h += `<button class="wk" style="${wkStyle(sm.id)};--i:${i}" data-w="${esc(sm.id)}"><span class="badge">${ICO(wkIcon(sm.id))}</span><span class="txt"><small>${esc(sm.titulo)}</small><strong>${esc(sm.tema)}</strong><div class="bar"><i style="width:${pct}%"></i></div><div class="cnt">${ok} de ${sm.dias.length} ${sm.dias.length === 1 ? "dia" : "dias"}</div></span></button>`;
+    h += `<button class="wk" style="${wkStyle(sm.id)};--i:${i}" data-w="${esc(sm.id)}"><span class="badge">${ICO(wkIcon(sm.id))}</span><span class="txt"><strong>${esc(sm.tema)}</strong><div class="cnt">${esc(sm.titulo)} · ${ok} de ${sm.dias.length} ${sm.dias.length === 1 ? "dia" : "dias"}</div><div class="bar"><i style="width:${pct}%"></i></div></span></button>`;
   });
   h += `</div><div class="row"><button class="btn" id="add">+ Passagem</button><button class="btn ghost" id="exp">Exportar tudo</button></div>`;
   if (livro.aviso) h += `<p class="muted">${esc(livro.aviso)}</p>`;
@@ -75,9 +81,9 @@ function telaSemana(id) {
   const sm = todasSemanas().find(x => x.id === id); if (!sm) return telaInicio();
   setTop(sm.titulo, telaInicio);
   const ok = sm.dias.filter(d => db.estudos[d.id]?.resumo).length;
-  let h = `<section class="whead" style="${wkStyle(sm.id)}"><small>${esc(sm.titulo)}</small><h2>${esc(sm.tema)}</h2><div class="bar"><i style="width:${sm.dias.length ? 100 * ok / sm.dias.length : 0}%"></i></div></section><div class="daylist" style="${wkStyle(sm.id)}">`;
+  let h = `<section class="whead" style="${wkStyle(sm.id)}"><h2>${esc(sm.tema)}</h2><p>${esc(sm.titulo)} · ${ok} de ${sm.dias.length} ${sm.dias.length === 1 ? "dia" : "dias"}</p><div class="bar"><i style="width:${sm.dias.length ? 100 * ok / sm.dias.length : 0}%"></i></div></section><div class="daylist" style="${wkStyle(sm.id)}">`;
   sm.dias.forEach((d, i) => { const [n, ...r] = d.titulo.split(" · "); const f = !!db.estudos[d.id]?.resumo;
-    h += `<button class="day ${f ? "done" : ""}" style="--i:${i}" data-d="${esc(d.id)}"><span class="num">${f ? "✓" : esc(n.replace(/\D+/g, "") || "•")}</span><span class="nm"><b>${esc(r.join(" · ") || n)}</b><span>${esc(d.ref)}</span></span><span class="go">${ICO("i-chev")}</span></button>`; });
+    h += `<button class="day ${f ? "done" : ""}" style="--i:${i}" data-d="${esc(d.id)}"><span class="num">${f ? ICO("i-check") : esc(n.replace(/\D+/g, "") || "•")}</span><span class="nm"><b>${esc(r.join(" · ") || n)}</b><span>${esc(d.ref)}</span></span><span class="go">${ICO("i-chev")}</span></button>`; });
   h += `</div>`;
   $("#view").innerHTML = h;
   document.querySelectorAll("[data-d]").forEach(el => el.onclick = () => telaSessao(el.dataset.d));
@@ -99,21 +105,20 @@ function telaNova() {
 function telaSessao(diaId, passo = 0) {
   const d = acharDia(diaId); if (!d) return telaInicio();
   const e = db.estudos[diaId] ||= { diaId, passos: {}, atualizado: Date.now() };
-  setTop(d.titulo.split(" · ")[0], () => telaSemana(d.semana.id));
-  const p = STEPS[passo];
-  let h = `<div style="${wkStyle(d.semana.id)}"><div class="passage"><small>${esc(d.semana.titulo)} · ${esc(d.semana.tema)}</small><h3>${esc(d.titulo.split(" · ").slice(1).join(" · "))}</h3>
-    <p class="ref">${esc(d.ref) || "Sem referência"}</p><br>${linkBiblia(d.ref)}` +
-    (d.texto ? `<p style="font-style:italic;white-space:pre-wrap">${esc(d.texto)}</p>` : `<p>Leia na sua Bíblia / Enchei-vos${d.pagina ? " (pág. " + esc(d.pagina) + ")" : ""}.</p>`) +
-    (d.foco ? `<p>${esc(d.foco)}</p>` : "") + `</div>`;
-  h += `<div class="stepper">` + STEPS.map((s, i) => `<button class="step ${i === passo ? "on" : ""} ${e.passos[s.id] ? "done" : ""}" data-i="${i}">${ICO(s.ic)}${s.nome.slice(0,6)}${s.nome.length>6?".":""}</button>`).join("") + `</div>`;
-  h += `<section class="stage"><h2>${p.nome}</h2><span class="sub">${p.sub}</span><p class="guide">${p.guia}</p>
-  <div class="micwrap"><button class="mic" id="mic" aria-label="Gravar">${ICO("i-mic")}</button>
-  <div class="wave" id="wave" aria-hidden="true"><b></b><b></b><b></b><b></b><b></b><b></b><b></b></div><div class="status" id="st">Toque e fale com Deus</div></div>
-  <textarea id="tx" placeholder="O que você falar aparece aqui. Pode editar.">${esc(e.passos[p.id] || "")}</textarea>
-  <div class="row"><button class="btn ghost grow" id="prev" ${passo === 0 ? "disabled" : ""}>‹ Anterior</button>
-  <button class="btn grow" id="next">${passo === STEPS.length - 1 ? "Concluir" : "Próxima ›"}</button></div></section>`;
+  setTop(d.titulo.split(" · ")[0] + " · " + d.semana.titulo, () => telaSemana(d.semana.id));
+  const p = STEPS[passo], titulo = d.titulo.split(" · ").slice(1).join(" · ");
+  let h = `<div style="${wkStyle(d.semana.id)}"><div class="passage"><h2>${esc(titulo)}</h2><p class="meta">${esc(d.semana.titulo)} · ${esc(d.semana.tema)}</p>
+    <p class="ref">${esc(d.ref) || "Sem referência"}</p>${linkBiblia(d.ref)}` +
+    (d.texto || d.foco ? `<details><summary>Sobre este dia</summary>${d.texto ? `<p style="font-style:italic;white-space:pre-wrap">${esc(d.texto)}</p>` : ""}${d.foco ? `<p>${esc(d.foco)}</p>` : ""}<p class="muted">Leia no seu Enchei-vos${d.pagina ? ", pág. " + esc(d.pagina) : ""}.</p></details>` : "") + `</div>`;
+  h += `<div class="stepper" role="group" aria-label="Etapas da Lectio Divina">` + STEPS.map((s, i) => `<button class="step ${i === passo ? "on" : ""} ${e.passos[s.id] ? "done" : ""}" data-i="${i}" aria-label="${s.nome}, ${s.sub}${e.passos[s.id] ? ", preenchida" : ""}" ${i === passo ? 'aria-current="step"' : ""}>${ICO(s.ic)}</button>`).join("") + `</div>`;
+  h += `<section class="stage"><h2>${p.nome}<span>${p.sub}</span></h2><p class="guide">${p.guia}</p>
+  <div class="micwrap"><button class="mic" id="mic" aria-label="Gravar" aria-pressed="false">${ICO("i-mic")}</button>
+  <div class="wave" id="wave" aria-hidden="true"><b></b><b></b><b></b><b></b><b></b><b></b><b></b></div><div class="status" id="st" aria-live="polite">Toque e fale com Deus</div></div>
+  <textarea id="tx" aria-label="O que você falou em ${p.nome}" placeholder="O que você falar aparece aqui. Pode editar.">${esc(e.passos[p.id] || "")}</textarea>
+  <div class="row"><button class="btn ghost grow" id="prev" ${passo === 0 ? "disabled" : ""}>Anterior</button>
+  <button class="btn grow" id="next">${passo === STEPS.length - 1 ? "Concluir" : "Próxima"}</button></div></section>`;
   h += `<h2 class="sec">Resumo</h2>` + (e.resumo ? resumoHTML(e.resumo) : `<p class="muted">Ao terminar, organize suas ideias.</p>`) +
-    `<div class="row"><button class="btn" id="org">✨ Organizar minhas ideias</button><button class="btn ghost" id="copy">Copiar</button></div></div>`;
+    `<div class="row"><button class="btn" id="org">Organizar minhas ideias</button><button class="btn ghost" id="copy">Copiar</button></div></div>`;
   $("#view").innerHTML = h;
   const tx = $("#tx");
   const guardar = () => { e.passos[p.id] = tx.value.trim(); e.atualizado = Date.now(); save(); };
@@ -132,7 +137,7 @@ function ligarMicrofone(btn, st, tx, guardar) {
   if (!SR) { st.textContent = "Seu navegador não tem ditado. Use o microfone do teclado."; btn.disabled = true; return; }
   let rec = null, ativo = false;
   const wave = document.getElementById("wave");
-  const parar = () => { ativo = false; rec?.stop(); btn.classList.remove("rec"); wave?.classList.remove("on"); st.textContent = "Toque e fale com Deus"; };
+  const parar = () => { ativo = false; rec?.stop(); btn.classList.remove("rec"); btn.setAttribute("aria-pressed", "false"); wave?.classList.remove("on"); st.textContent = "Toque e fale com Deus"; };
   btn.onclick = () => {
     if (ativo) return parar();
     rec = new SR(); rec.lang = "pt-BR"; rec.continuous = true; rec.interimResults = true;
@@ -144,7 +149,7 @@ function ligarMicrofone(btn, st, tx, guardar) {
     };
     rec.onend = () => { if (ativo) { try { rec.start(); } catch {} } };  // mantém ouvindo em pausas
     rec.onerror = ev => { if (ev.error === "not-allowed") { toast("Permita o microfone"); parar(); } else if (ev.error === "network") { toast("Ditado precisa de internet"); parar(); } };
-    ativo = true; btn.classList.add("rec"); wave?.classList.add("on"); st.textContent = "Ouvindo… toque para parar"; rec.start();
+    ativo = true; btn.classList.add("rec"); btn.setAttribute("aria-pressed", "true"); wave?.classList.add("on"); st.textContent = "Ouvindo… toque para parar"; rec.start();
   };
 }
 

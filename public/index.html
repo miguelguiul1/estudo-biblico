@@ -27,12 +27,14 @@
 <symbol id="i-cross" viewBox="0 0 24 24"><path d="M12 3v18M6 9h12"/></symbol>
 <symbol id="i-dove" viewBox="0 0 24 24"><path d="M3 14c4 0 6-2 8-6 3 3 6 3 10 2-2 6-6 10-12 10-3 0-5-2-6-6z"/><path d="M11 8c0-2 1-4 3-5"/></symbol>
 <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+<symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.500v3M12 18.500v3M2.500 12h3M18.500 12h3M5.200 5.200l2.100 2.100M16.700 16.700l2.100 2.100M5.200 18.800l2.100-2.100M16.700 7.300l2.100-2.100"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.500l4.500 4.500L19 7.500"/></symbol>
 <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
 </svg>
 <header class="top">
-  <button id="back" class="icon" hidden aria-label="Voltar">‹</button>
+  <button id="back" class="icon" hidden aria-label="Voltar"><svg class="ico" aria-hidden="true"><use href="#i-back"/></svg></button>
   <h1 id="title">Lectio</h1>
-  <button id="cfg" class="icon" aria-label="Ajustes">⚙</button>
+  <button id="cfg" class="icon" aria-label="Ajustes"><svg class="ico" aria-hidden="true"><use href="#i-gear"/></svg></button>
 </header>
 <main id="view"></main>
 <div id="toast" role="status"></div>
