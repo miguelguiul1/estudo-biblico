@@ -97,7 +97,7 @@ function telaPerfil() {
     if (r2.error) return msg("Não foi possível salvar agora. Confira a conexão e tente de novo.");
     _perfilApelido = ap; _perfilPronto = uid;
     await decideSync();
-    telaInicio();
+    if (_key === "Seu perfil") telaInicio(); // se o app abriu outra pergunta (ex.: enviar dados), não cobrir
   };
 }
 
