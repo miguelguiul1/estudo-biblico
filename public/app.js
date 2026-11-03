@@ -340,5 +340,5 @@ function telaQuiz(semId) {
 }
 
 // ---------- Início ----------
-Promise.all([fetch("data/encheivos.json").then(r => r.json()).then(j => { livro = j; }).catch(() => {}), fetch("data/quiz.json").then(r => r.json()).then(j => { quiz = j; }).catch(() => {})]).finally(telaInicio);
+Promise.all([fetch("data/encheivos.json").then(r => r.json()).then(j => { livro = j; }).catch(() => {}), fetch("data/quiz.json").then(r => r.json()).then(j => { quiz = j; }).catch(() => {})]).finally(() => { if (!(typeof telaDeLink === "function" && telaDeLink())) telaInicio(); });
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});

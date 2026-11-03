@@ -9,6 +9,13 @@ const EXCLUIR_CONTA_ATIVA = false; // mude para true só depois do deploy da Edg
 const AVISO_VERSAO = "provisorio-v0";
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+// Link do e-mail de recuperação: precisa ser lido antes de o supabase-js tratar e limpar o endereço.
+const _hashLink = location.hash + location.search;
+let _recuperando = /[#&?]type=recovery/.test(_hashLink);
+let _linkRuim = /[#&?]error_code=/.test(_hashLink) || (/[#&?]error=/.test(_hashLink) && /[#&?]error_description=/.test(_hashLink));
+if (_linkRuim) history.replaceState(null, "", location.pathname); // o endereço de erro não traz tokens, mas não precisa ficar visível
+const MSG_ESQUECI = "Se esse e-mail tiver conta, enviamos um link."; // sempre a mesma, exista o e-mail ou não
+
 let sb = null, sessao = null, _perfilPronto = null, _perfilApelido = "";
 let _syncTimer = null, _syncando = false, _syncDeNovo = false, _syncOk = false, _syncMsg = "";
 
@@ -28,6 +35,7 @@ function erroAuth(err) {
     case "user_already_exists": case "email_exists": return "Este e-mail já tem conta. Tente entrar.";
     case "weak_password": return "Senha fraca. Use pelo menos 8 caracteres, misturando letras e números.";
     case "over_email_send_rate_limit": case "over_request_rate_limit": return "Muitas tentativas. Espere alguns minutos e tente de novo.";
+    case "same_password": return "Escolha uma senha diferente da anterior.";
     case "signup_disabled": return "O cadastro está desativado no momento.";
     default: return !navigator.onLine || err?.name === "AuthRetryableFetchError" ? "Sem conexão. Tente de novo quando estiver online." : "Não foi possível agora. Tente de novo em instantes.";
   }
@@ -42,7 +50,9 @@ function iniciaSupabase() {
 }
 
 async function aoMudarSessao(ev) {
-  if (ev === "SIGNED_OUT") { _perfilPronto = null; setSyncMsg(""); if (document.getElementById("conta-box")) telaAjustes(); return; }
+  if (ev === "PASSWORD_RECOVERY") { _recuperando = true; telaNovaSenha(); return; }
+  if (ev === "SIGNED_OUT") { _recuperando = false; _perfilPronto = null; setSyncMsg(""); if (document.getElementById("conta-box")) telaAjustes(); return; }
+  if (_recuperando) return; // quem veio pelo link do e-mail só segue depois de criar a nova senha
   if (!sessao || ev === "TOKEN_REFRESHED" || ev === "USER_UPDATED") return;
   if (_perfilPronto === sessao.user.id) { agendaSync(0); return; }
   await entrarNaConta();
@@ -224,8 +234,10 @@ function telaConta(modo = "entrar") {
     <label for="pw">Senha</label><input id="pw" type="password" autocomplete="${novo ? "new-password" : "current-password"}" minlength="8" required>
     ${novo ? '<p class="muted">Use pelo menos 8 caracteres.</p>' : ""}<p id="am" class="msg" role="alert"></p>
     <div class="row"><button class="btn grow" id="go" type="submit">${novo ? "Criar conta" : "Entrar"}</button></div></form>
+    ${novo ? "" : '<div class="row"><button class="btn ghost" id="esq" type="button">Esqueci minha senha</button></div>'}
     <p class="muted">A conta é opcional. Sem ela, tudo continua só neste aparelho.</p></div>`;
   document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => telaConta(b.dataset.m));
+  $("#esq")?.addEventListener("click", () => telaEsqueci());
   const msg = t => { $("#am").textContent = t; };
   $("#fa").onsubmit = async ev => {
     ev.preventDefault(); msg("");
@@ -245,6 +257,67 @@ function telaConta(modo = "entrar") {
       toast("Você entrou.");
     }
   };
+}
+
+// ---------- Esqueci minha senha ----------
+function telaEsqueci(aviso = "") {
+  if (!iniciaSupabase()) { toast("Conta indisponível agora. O app continua funcionando neste aparelho."); return; }
+  setTop("Esqueci minha senha", () => telaConta("entrar"));
+  $("#view").innerHTML = `<div class="card"><h2 class="titulo-tela">Esqueci minha senha</h2><p class="muted">Digite o e-mail da sua conta. Se ele tiver conta, enviamos um link para você criar uma nova senha.</p>
+    <form id="fe" novalidate><label for="ee">E-mail</label><input id="ee" type="email" autocomplete="email" inputmode="email" required>
+    <p id="ee-msg" class="msg" role="alert">${esc(aviso)}</p>
+    <div class="row"><button class="btn grow" id="ego" type="submit">Enviar link</button></div></form>
+    <div class="row"><button class="btn ghost grow" id="evolta" type="button">Voltar para entrar</button></div></div>`;
+  $("#evolta").onclick = () => telaConta("entrar");
+  const msg = t => { $("#ee-msg").textContent = t; };
+  $("#fe").onsubmit = async ev => {
+    ev.preventDefault(); msg("");
+    const email = $("#ee").value.trim();
+    if (!/^\S+@\S+\.\S+$/.test(email)) return msg("Digite um e-mail válido.");
+    if (!navigator.onLine) return msg("Sem conexão. Tente de novo quando estiver online.");
+    const btn = $("#ego"); btn.disabled = true;
+    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin });
+    if (error?.code === "over_email_send_rate_limit" || error?.code === "over_request_rate_limit") { btn.disabled = false; return msg("Muitas tentativas. Espere alguns minutos e tente de novo."); }
+    if (error?.name === "AuthRetryableFetchError" || !navigator.onLine) { btn.disabled = false; return msg("Sem conexão. Tente de novo quando estiver online."); }
+    msg(MSG_ESQUECI); // a mesma resposta, exista a conta ou não
+    setTimeout(() => { btn.disabled = false; }, 30000);
+  };
+}
+
+// Tela aberta quando a pessoa volta pelo link do e-mail.
+function telaNovaSenha() {
+  setTop("Nova senha", null);
+  $("#view").innerHTML = `<div class="card"><h2 class="titulo-tela">Crie uma nova senha</h2><p class="muted">Use pelo menos 8 caracteres.</p>
+    <form id="fn" novalidate><label for="n1">Nova senha</label><input id="n1" type="password" autocomplete="new-password" minlength="8" required>
+    <label for="n2">Repita a nova senha</label><input id="n2" type="password" autocomplete="new-password" minlength="8" required>
+    <p id="nm" class="msg" role="alert"></p>
+    <div class="row"><button class="btn grow" id="ngo" type="submit">Salvar nova senha</button></div></form>
+    <div class="row"><button class="btn ghost grow" id="ncan" type="button">Cancelar</button></div></div>`;
+  const msg = t => { $("#nm").textContent = t; };
+  $("#ncan").onclick = async () => { _recuperando = false; if (sb) await sb.auth.signOut({ scope: "local" }); telaInicio(); };
+  $("#fn").onsubmit = async ev => {
+    ev.preventDefault(); msg("");
+    const a = $("#n1").value, b = $("#n2").value;
+    if (a.length < 8) return msg("A senha precisa ter pelo menos 8 caracteres.");
+    if (a !== b) return msg("As duas senhas precisam ser iguais.");
+    const btn = $("#ngo"); btn.disabled = true;
+    const { data } = await sb.auth.getSession(); // espera o app terminar de validar o link
+    if (!data?.session) { btn.disabled = false; return msg("O link expirou ou já foi usado. Peça um novo em \"Esqueci minha senha\"."); }
+    sessao = data.session;
+    const { error } = await sb.auth.updateUser({ password: a });
+    btn.disabled = false;
+    if (error) return msg(erroAuth(error));
+    _recuperando = false; toast("Senha alterada.");
+    await entrarNaConta();
+    if (_key === "Nova senha") telaInicio();
+  };
+}
+
+// Chamada na abertura do app: mostra a tela certa se a pessoa chegou por um link do e-mail.
+function telaDeLink() {
+  if (_recuperando) { telaNovaSenha(); return true; }
+  if (_linkRuim) { _linkRuim = false; telaEsqueci("O link expirou ou já foi usado. Peça um novo aqui."); return true; }
+  return false;
 }
 
 function telaConfirmeEmail(email) {

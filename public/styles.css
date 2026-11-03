@@ -209,3 +209,6 @@ input[type=checkbox]{width:26px;min-height:26px;height:26px;flex:none;padding:0;
 #lb img{max-width:100%;max-height:70vh;border-radius:12px;object-fit:contain}
 .lbrow{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
 .lbmsg{color:#fff;margin:0}
+
+/* noite: botões de borda mantêm a letra clara (a regra do botão cheio tinha mais peso) */
+:root[data-theme="dark"] .btn.ghost{color:var(--accent)}

@@ -1,4 +1,4 @@
-const CACHE = "lectio-v5";
+const CACHE = "lectio-v6";
 const FILES = ["./","index.html","styles.css","app.js","conta.js","fotos.js","vendor/supabase.js","manifest.webmanifest","data/encheivos.json","data/quiz.json","icons/icon.svg"];
 const FONT_HOSTS = ["fonts.googleapis.com", "fonts.gstatic.com"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES))); self.skipWaiting(); });
