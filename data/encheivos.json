@@ -1,14 +1,210 @@
 {
-  "livro": "Enchei-vos",
-  "aviso": "Conteúdo do livro ainda não carregado. Envie as fotos das páginas para eu transcrever aqui, ou adicione manualmente pelo botão '+ Passagem'.",
-  "semanas": [
+ "livro": "Enchei-vos",
+ "aviso": "Estrutura e referências das semanas 1–3 (+ início da 4). O texto do livro não está copiado: leia na sua Bíblia/Enchei-vos.",
+ "semanas": [
+  {
+   "id": "s1",
+   "titulo": "1ª Semana",
+   "tema": "Lectio Divina",
+   "dias": [
     {
-      "id": "s1",
-      "titulo": "Semana 1",
-      "tema": "(preencher com o tema do Enchei-vos)",
-      "dias": [
-        { "id": "s1d1", "titulo": "Dia 1", "ref": "", "texto": "" }
-      ]
+     "id": "d01",
+     "titulo": "1º dia · A Palavra de Deus",
+     "ref": "Sl 119,9; Is 40,8; Sl 18,31; Sl 119,130; Tg 1,22; Lc 11,28; Mt 7,24; Mt 24,35; Mt 4,4; Tg 1,21; Jo 1,14; Hb 1,3",
+     "foco": "Estrutura da Bíblia (AT e NT) e passagens sobre a Palavra de Deus; copiar o versículo favorito.",
+     "pagina": "13-16",
+     "texto": ""
+    },
+    {
+     "id": "d02",
+     "titulo": "2º dia · O Verbo era Deus",
+     "ref": "Mt 1,1; Mc 1,1; Lc 1,1-4; Jo 1,1",
+     "foco": "Os títulos dos livros e como cada Evangelho começa; o que Jo 1,1 significa para mim.",
+     "pagina": "16-18",
+     "texto": ""
+    },
+    {
+     "id": "d03",
+     "titulo": "3º dia · O versículo mais importante",
+     "ref": "Dt 6,4-5; Sl 23,1-2; 1Cor 13,4-6; 1Jo 4,8b",
+     "foco": "Aprender a achar citações; meditar em 'Deus é amor'.",
+     "pagina": "18-20",
+     "texto": ""
+    },
+    {
+     "id": "d04",
+     "titulo": "4º dia · A Palavra de Deus por si mesma",
+     "ref": "Jo 1,1; Sl 40,8; Sl 119,105; Hb 4,12; 2Tm 3,16-17; Is 55,10-11; Jr 23,29",
+     "foco": "O que a Escritura diz de si mesma; escolher a passagem que mais tocou e rezar.",
+     "pagina": "20-21",
+     "texto": ""
+    },
+    {
+     "id": "d05",
+     "titulo": "5º dia · A Lectio Divina",
+     "ref": "Mc 5,41-42; Mc 2,1-12",
+     "foco": "Os passos: leitura, meditação, oração; praticar os três primeiros.",
+     "pagina": "22-24",
+     "texto": ""
+    },
+    {
+     "id": "d06",
+     "titulo": "6º dia · Contemplação e ação como resposta de amor",
+     "ref": "Mc 2,1-12",
+     "foco": "Repetir a passagem e acrescentar contemplação e ação concreta; relatório semanal.",
+     "pagina": "24-26",
+     "texto": ""
+    },
+    {
+     "id": "d07",
+     "titulo": "7º dia · Estende tua mão",
+     "ref": "Mc 3,1b-6",
+     "foco": "Primeira Lectio completa; relatório de progresso espiritual da semana.",
+     "pagina": "26-28",
+     "texto": ""
     }
-  ]
+   ]
+  },
+  {
+   "id": "s2",
+   "titulo": "2ª Semana",
+   "tema": "O encontro com Jesus",
+   "dias": [
+    {
+     "id": "d08",
+     "titulo": "8º dia · Jesus encontra Zaqueu",
+     "ref": "Lc 19,2-10",
+     "foco": "O que me impede de ver Jesus; rezar 'Desce depressa' com o próprio nome.",
+     "pagina": "29-32",
+     "texto": ""
+    },
+    {
+     "id": "d09",
+     "titulo": "9º dia · Jesus encontra uma pecadora pública",
+     "ref": "Lc 7,36-50",
+     "foco": "A dignidade que Jesus vê em cada pessoa; pedir perdão; lembrar quando ouvi falar do amor de Jesus.",
+     "pagina": "32-35",
+     "texto": ""
+    },
+    {
+     "id": "d10",
+     "titulo": "10º dia · Jesus encontra uma mulher adúltera",
+     "ref": "Jo 8,1-11",
+     "foco": "'Eu também não te condeno'; não julgar; perdoar.",
+     "pagina": "36-39",
+     "texto": ""
+    },
+    {
+     "id": "d11",
+     "titulo": "11º dia · Jesus encontra Mateus",
+     "ref": "Mt 9,9-13",
+     "foco": "'Segue-me'; identificar áreas da vida que preciso entregar.",
+     "pagina": "40-43",
+     "texto": ""
+    },
+    {
+     "id": "d12",
+     "titulo": "12º dia · Jesus encontra uma mulher enferma",
+     "ref": "Lc 8,43-48",
+     "foco": "Fé e ousadia de tocar o manto; apresentar a Jesus o que parece impossível.",
+     "pagina": "43-46",
+     "texto": ""
+    },
+    {
+     "id": "d13",
+     "titulo": "13º dia · Jesus encontra Bartimeu",
+     "ref": "Mc 10,46-52",
+     "foco": "Insistir na oração; o jeito de ser de Jesus; reescrever a passagem com meu nome.",
+     "pagina": "46-49",
+     "texto": ""
+    },
+    {
+     "id": "d14",
+     "titulo": "14º dia · Jesus encontra um leproso",
+     "ref": "Mt 8,1-3",
+     "foco": "Jesus se identifica com o ferido; Ef 5,22-33; relatório da semana.",
+     "pagina": "50-52",
+     "texto": ""
+    }
+   ]
+  },
+  {
+   "id": "s3",
+   "titulo": "3ª Semana",
+   "tema": "Deus criou todas as coisas",
+   "dias": [
+    {
+     "id": "d15",
+     "titulo": "15º dia · A Santíssima Trindade",
+     "ref": "1Jo 4,8; Jo 10,30; Jo 15,26; 2Cor 13,13",
+     "foco": "Um só Deus em três Pessoas; Glória ao Pai como resposta de amor.",
+     "pagina": "53-56",
+     "texto": ""
+    },
+    {
+     "id": "d16",
+     "titulo": "16º dia · Deus criou os anjos",
+     "ref": "Sl 91,1-13",
+     "foco": "O que são os anjos e para que foram criados; Anjo da Guarda.",
+     "pagina": "56-58",
+     "texto": ""
+    },
+    {
+     "id": "d17",
+     "titulo": "17º dia · A criação das coisas visíveis",
+     "ref": "Gn 1,1-25",
+     "foco": "Gênesis 1 como poema litúrgico; louvar o Criador.",
+     "pagina": "59-60",
+     "texto": ""
+    },
+    {
+     "id": "d18",
+     "titulo": "18º dia · Deus criou o Homem",
+     "ref": "Gn 1,26-27",
+     "foco": "O Homem como ápice da criação; Trindade envolvida. ATENÇÃO: páginas 62-63 faltam no PDF.",
+     "pagina": "61-63",
+     "texto": ""
+    },
+    {
+     "id": "d19",
+     "titulo": "19º dia · Deus e o Homem trabalhando juntos",
+     "ref": "Gn 2,4-14",
+     "foco": "Segundo relato da criação; trabalho como parte da identidade do Homem.",
+     "pagina": "64-65",
+     "texto": ""
+    },
+    {
+     "id": "d20",
+     "titulo": "20º dia · O sopro da vida",
+     "ref": "Gn 2,4-7",
+     "foco": "O Homem modelado do barro e o sopro de vida (nephesh).",
+     "pagina": "66-68",
+     "texto": ""
+    },
+    {
+     "id": "d21",
+     "titulo": "21º dia · 'Tirada do homem'",
+     "ref": "Gn 2,18-25",
+     "foco": "Criado para amar e ser amado; relatório da semana.",
+     "pagina": "69-72",
+     "texto": ""
+    }
+   ]
+  },
+  {
+   "id": "s4",
+   "titulo": "4ª Semana",
+   "tema": "O amor do Pai pelo homem",
+   "dias": [
+    {
+     "id": "d22",
+     "titulo": "22º dia · Os dons do Pai para o Homem",
+     "ref": "",
+     "foco": "Em andamento: só a primeira página (73) foi enviada.",
+     "pagina": "73-",
+     "texto": ""
+    }
+   ]
+  }
+ ]
 }

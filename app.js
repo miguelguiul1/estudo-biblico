@@ -72,7 +72,7 @@ function telaSessao(diaId, passo = 0) {
   setTop(`${d.semana.titulo} · ${d.titulo}`, telaInicio);
   const p = STEPS[passo];
   let h = `<div class="card"><div class="muted">${esc(d.ref) || "Sem referência"}</div>` +
-    (d.texto ? `<p class="passage">${esc(d.texto)}</p>` : `<p class="muted">Leia a passagem na sua Bíblia / Enchei-vos.</p>`) + `</div>`;
+    (d.texto ? `<p class="passage">${esc(d.texto)}</p>` : `<p class="muted">Leia na sua Bíblia / Enchei-vos${d.pagina ? " (pág. " + esc(d.pagina) + ")" : ""}.</p>`) + (d.foco ? `<p class="muted">${esc(d.foco)}</p>` : "") + `</div>`;
   h += `<div class="steps">` + STEPS.map((s, i) => `<button class="step ${i === passo ? "on" : ""} ${e.passos[s.id] ? "done" : ""}" data-i="${i}">${s.nome}</button>`).join("") + `</div>`;
   h += `<h2>${p.nome} <span class="muted">· ${p.sub}</span></h2><p class="guide">${p.guia}</p>
   <button class="mic" id="mic" aria-label="Gravar">🎙</button><div class="status muted" id="st">Toque para falar</div>
