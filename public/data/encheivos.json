@@ -1,6 +1,6 @@
 {
  "livro": "Enchei-vos",
- "aviso": "Estrutura e referências das semanas 1–3 (+ início da 4). O texto do livro não está copiado: leia na sua Bíblia/Enchei-vos.",
+ "aviso": "Estrutura e referências das semanas 1–4 e dias 29–31. O texto do livro não está copiado: leia na sua Bíblia/Enchei-vos.",
  "semanas": [
   {
    "id": "s1",
@@ -199,9 +199,88 @@
     {
      "id": "d22",
      "titulo": "22º dia · Os dons do Pai para o Homem",
-     "ref": "",
-     "foco": "Em andamento: só a primeira página (73) foi enviada.",
-     "pagina": "73-",
+     "ref": "Eclo 17,6.11",
+     "foco": "Como era o Homem antes do pecado original e os dons que o Pai lhe deu; meditar como filho de Deus pelo Batismo.",
+     "pagina": "73-76",
+     "texto": ""
+    },
+    {
+     "id": "d23",
+     "titulo": "23º dia · Um pouco menos que os anjos",
+     "ref": "Sl 8,4-10",
+     "foco": "Os dons preternaturais (integridade, imortalidade, conhecimento); louvar o Criador com o Salmo 8.",
+     "pagina": "76-78",
+     "texto": ""
+    },
+    {
+     "id": "d24",
+     "titulo": "24º dia · O dom da liberdade",
+     "ref": "Gn 2,16-17",
+     "foco": "O Homem criado livre, mas criatura e não Deus; a liberdade como dom e o limite do amor; obediência de amor.",
+     "pagina": "78-81",
+     "texto": ""
+    },
+    {
+     "id": "d25",
+     "titulo": "25º dia · A queda dos anjos",
+     "ref": "Ez 28,12b-15",
+     "foco": "A rebelião de Lúcifer, o orgulho e a recusa de servir; agradecer pelo Anjo da Guarda.",
+     "pagina": "81-84",
+     "texto": ""
+    },
+    {
+     "id": "d26",
+     "titulo": "26º dia · A queda do Homem",
+     "ref": "Gn 3,1-6",
+     "foco": "A serpente e as mentiras do Diabo; as tentações de hoje seguem o mesmo método; Sacramento da Reconciliação.",
+     "pagina": "84-87",
+     "texto": ""
+    },
+    {
+     "id": "d27",
+     "titulo": "27º dia · As consequências do pecado",
+     "ref": "Gn 3,7-14",
+     "foco": "A pior consequência: a separação de Deus; esconder-se e acusar os outros; procurar Deus e pedir perdão.",
+     "pagina": "88-90",
+     "texto": ""
+    },
+    {
+     "id": "d28",
+     "titulo": "28º dia · O modo como o Pai nos ama",
+     "ref": "Gn 3,15-24",
+     "foco": "A promessa de salvação e o amor fiel do Pai; Maria e o combate espiritual; relatório da semana.",
+     "pagina": "91-94",
+     "texto": ""
+    }
+   ]
+  },
+  {
+   "id": "s5",
+   "titulo": "5ª Semana",
+   "tema": "As profecias sobre o amor de Deus",
+   "dias": [
+    {
+     "id": "d29",
+     "titulo": "29º dia · Se Deus nos ama, por que...?",
+     "ref": "Gl 5,13-14",
+     "foco": "Por que existem o sofrimento e o mal; liberdade e livre-arbítrio; pedir a graça de resistir à tentação.",
+     "pagina": "95-98",
+     "texto": ""
+    },
+    {
+     "id": "d30",
+     "titulo": "30º dia · O amor de Deus é eterno e incondicional",
+     "ref": "Jr 31,3-5; 1Jo 4,19",
+     "foco": "Deus sempre amou e sempre amará; o amor que cura e reconstrói; responder com amor.",
+     "pagina": "98-101",
+     "texto": ""
+    },
+    {
+     "id": "d31",
+     "titulo": "31º dia · O amor de Deus é pessoal",
+     "ref": "Is 43,1-5",
+     "foco": "Deus me conhece pelo nome; rezar a passagem colocando o meu nome e meus desafios.",
+     "pagina": "102-",
      "texto": ""
     }
    ]
